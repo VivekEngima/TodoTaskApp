@@ -30,7 +30,6 @@ namespace TodoTaskApp.Services
             var task = MapToEntity(model);
             return await _repository.CreateAsync(task);
         }
-
         public async Task<bool> UpdateTaskAsync(TodoTaskViewModel model)
         {
             var task = MapToEntity(model);
@@ -132,5 +131,11 @@ namespace TodoTaskApp.Services
             dashboard.MonthlyTaskCreation = dailyData;
             return dashboard;
         }
+        public async Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(
+    FilterViewModel filter)
+        {
+            return await _repository.FilterTasksByDateRangeAsync(filter);
+        }
+
     }
 }

@@ -366,5 +366,24 @@ namespace TodoTaskApp.Controllers
             result.Add(current.ToString());
             return result.ToArray();
         }
+        [HttpPost]
+        public async Task<IActionResult> FilterByDateRange([FromBody] FilterViewModel filter)
+        {
+            if (filter.StartDate.HasValue && filter.EndDate.HasValue
+                && filter.StartDate > filter.EndDate)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Start date must be on or before End date"
+                });
+            }
+
+            var tasks = await _todoTaskService
+                .FilterTasksByDateRangeAsync(filter);
+
+            return Json(new { success = true, data = tasks });
+        }
+
     }
 }

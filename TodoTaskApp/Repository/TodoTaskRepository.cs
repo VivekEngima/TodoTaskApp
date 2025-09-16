@@ -108,5 +108,23 @@ namespace TodoTaskApp.Repository
                 parameters,
                 commandType: CommandType.StoredProcedure);
         }
+        public async Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(
+    FilterViewModel filter)
+        {
+            using var conn = _context.CreateConnection();
+            var p = new DynamicParameters();
+            p.Add("@Status", (object?)filter.Status);
+            p.Add("@Priority", (object?)filter.Priority);
+            p.Add("@SearchTerm", (object?)filter.SearchTerm);
+            p.Add("@StartDate", (object?)filter.StartDate);
+            p.Add("@EndDate", (object?)filter.EndDate);
+
+            return await conn.QueryAsync<TodoTaskViewModel>(
+                "sp_FilterTasksByDateRange",
+                p,
+                commandType: CommandType.StoredProcedure
+            );
+        }
+
     }
 }

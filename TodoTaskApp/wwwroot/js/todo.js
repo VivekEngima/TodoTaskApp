@@ -292,7 +292,7 @@
 
     // Apply Upcoming/Today/Calendar filters
     function applyGeneralFilter(type) {
-        // Reset text/status/priority filters
+        // Reset other filters
         currentTodoFilter = { status: null, priority: null, searchTerm: null };
         $('.status-btn, .priority-btn').removeClass('active');
         $('#searchInput').val('');
@@ -301,26 +301,63 @@
         today.setHours(0, 0, 0, 0);
 
         let filtered = [];
+
         if (type === 'upcoming') {
             filtered = todoTasks.filter(t => new Date(t.DueDate) > today);
-        } else if (type === 'today') {
+        }
+        else if (type === 'today') {
             filtered = todoTasks.filter(t => {
                 const d = new Date(t.DueDate);
                 d.setHours(0, 0, 0, 0);
                 return d.getTime() === today.getTime();
             });
-        } else if (type === 'calendar') {
-            const input = prompt('Enter a date (YYYY-MM-DD):', today.toISOString().slice(0, 10));
-            const sel = new Date(input);
-            if (isNaN(sel)) { showTodoAlert('Invalid date', 'warning'); return; }
-            sel.setHours(0, 0, 0, 0);
+        }
+        else if (type === 'calendar') {
+            // Prompt for start date
+            const defaultDate = today.toISOString().slice(0, 10);
+            const startInput = prompt('Enter start date (YYYY-MM-DD):', defaultDate);
+            if (!startInput) {
+                showTodoAlert('Start date is required', 'warning');
+                return;
+            }
+            const startDate = new Date(startInput);
+            startDate.setHours(0, 0, 0, 0);
+            if (isNaN(startDate)) {
+                showTodoAlert('Invalid start date', 'warning');
+                return;
+            }
+
+            // Prompt for end date
+            const endInput = prompt('Enter end date (YYYY-MM-DD):', defaultDate);
+            if (!endInput) {
+                showTodoAlert('End date is required', 'warning');
+                return;
+            }
+            const endDate = new Date(endInput);
+            endDate.setHours(0, 0, 0, 0);
+            if (isNaN(endDate)) {
+                showTodoAlert('Invalid end date', 'warning');
+                return;
+            }
+
+            // Validate order
+            if (startDate > endDate) {
+                showTodoAlert('Start date must be on or before End date', 'warning');
+                return;
+            }
+
+            // Filter between the two dates inclusive
             filtered = todoTasks.filter(t => {
                 const d = new Date(t.DueDate);
                 d.setHours(0, 0, 0, 0);
-                return d.getTime() === sel.getTime();
+                return d >= startDate && d <= endDate;
             });
         }
-        showTodoAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} filter applied`, 'info');
+
+        showTodoAlert(
+            `${type.charAt(0).toUpperCase() + type.slice(1)} filter applied`,
+            'info'
+        );
         renderTaskTable(filtered);
     }
 

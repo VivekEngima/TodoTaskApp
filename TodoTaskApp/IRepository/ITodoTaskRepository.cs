@@ -11,5 +11,8 @@ namespace TodoTaskApp.IRepository
         Task<bool> DeleteAsync(int id);
         Task<bool> UpdateStatusAsync(int id, string status);
         Task<IEnumerable<TodoTask>> FilterTasksAsync(string? status, string? priority, string? searchTerm);
+        // Filter tasks by a specific date range
+        Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(FilterViewModel filter);
+
     }
 }

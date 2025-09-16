@@ -14,5 +14,7 @@ namespace TodoTaskApp.IServices
         FilterViewModel GetFilterOptions();
 
         Task<DashboardViewModel> GetDashboardStatisticsAsync();
+        Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(FilterViewModel filter);
+
     }
 }
