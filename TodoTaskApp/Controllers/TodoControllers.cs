@@ -254,15 +254,12 @@ namespace TodoTaskApp.Controllers
             {
                 if (file == null || file.Length == 0)
                     return Json(new { success = false, message = "Please select a file" });
-
                 if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
                     return Json(new { success = false, message = "Only CSV files are supported" });
 
                 var tasks = new List<TodoTaskViewModel>();
-
                 using var reader = new StreamReader(file.OpenReadStream());
                 var line = await reader.ReadLineAsync(); // Skip header
-
                 int lineNumber = 1;
                 var errors = new List<string>();
 
@@ -272,16 +269,23 @@ namespace TodoTaskApp.Controllers
                     try
                     {
                         var values = ParseCsvLine(line);
-
                         if (values.Length < 5)
                         {
                             errors.Add($"Line {lineNumber}: Insufficient columns");
                             continue;
                         }
 
+                        var title = values[0]?.Trim().Trim('"') ?? "";
+                        // Duplicate title check
+                        if (await _todoTaskService.CheckDuplicateTaskAsync(title, null))
+                        {
+                            errors.Add($"Line {lineNumber}: Task with title '{title}' already exists");
+                            continue;
+                        }
+
                         var task = new TodoTaskViewModel
                         {
-                            Title = values[0]?.Trim().Trim('"') ?? "",
+                            Title = title,
                             Description = values[1]?.Trim().Trim('"'),
                             Priority = values[2]?.Trim().Trim('"') ?? "Normal",
                             Status = values[3]?.Trim().Trim('"') ?? "Pending",
@@ -295,10 +299,8 @@ namespace TodoTaskApp.Controllers
                             errors.Add($"Line {lineNumber}: Title is required");
                             continue;
                         }
-
                         if (!new[] { "High", "Normal", "Low" }.Contains(task.Priority))
                             task.Priority = "Normal";
-
                         if (!new[] { "Pending", "Hold", "Completed" }.Contains(task.Status))
                             task.Status = "Pending";
 
@@ -325,8 +327,8 @@ namespace TodoTaskApp.Controllers
                 return Json(new
                 {
                     success = true,
-                    message = message,
-                    imported = imported,
+                    message,
+                    imported,
                     errors = errors.Take(5) // Return first 5 errors
                 });
             }
@@ -343,11 +345,9 @@ namespace TodoTaskApp.Controllers
             var result = new List<string>();
             var inQuotes = false;
             var current = new StringBuilder();
-
             for (int i = 0; i < line.Length; i++)
             {
                 char c = line[i];
-
                 if (c == '"')
                 {
                     inQuotes = !inQuotes;
@@ -362,10 +362,10 @@ namespace TodoTaskApp.Controllers
                     current.Append(c);
                 }
             }
-
             result.Add(current.ToString());
             return result.ToArray();
         }
+
         [HttpPost]
         public async Task<IActionResult> FilterByDateRange([FromBody] FilterViewModel filter)
         {

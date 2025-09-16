@@ -15,6 +15,8 @@ namespace TodoTaskApp.IServices
 
         Task<DashboardViewModel> GetDashboardStatisticsAsync();
         Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(FilterViewModel filter);
+        Task<bool> CheckDuplicateTaskAsync(string title, string? description);
+
 
     }
 }

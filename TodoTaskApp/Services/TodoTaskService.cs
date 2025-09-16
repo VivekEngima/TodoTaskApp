@@ -136,6 +136,15 @@ namespace TodoTaskApp.Services
         {
             return await _repository.FilterTasksByDateRangeAsync(filter);
         }
+        public async Task<bool> CheckDuplicateTaskAsync(string title, string? description, int? excludeId = null)
+    => await _repository.CheckDuplicateByTitleAsync(title);
+
+        // In TodoTaskService.cs
+        public async Task<bool> CheckDuplicateTaskAsync(string title, string? description)
+        {
+            // Leverage repository method to check for duplicate by title
+            return await _repository.CheckDuplicateByTitleAsync(title);
+        }
 
     }
 }

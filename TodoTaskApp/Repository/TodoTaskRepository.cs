@@ -125,6 +125,12 @@ namespace TodoTaskApp.Repository
                 commandType: CommandType.StoredProcedure
             );
         }
-
+        public async Task<bool> CheckDuplicateByTitleAsync(string title)
+        {
+            using var conn = _context.CreateConnection();
+            var sql = "SELECT COUNT(*) FROM TodoTasks WHERE Title = @Title";
+            var count = await conn.ExecuteScalarAsync<int>(sql, new { Title = title });
+            return count > 0;
+        }
     }
 }
