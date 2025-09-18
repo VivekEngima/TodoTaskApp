@@ -324,7 +324,7 @@
     }
     updateTodoTaskCount(tasks.length);
   }
-
+  // This is main branching point for better code management. --- IGNORE ---
   // Quick add row HTML
   function createQuickAddRow() {
     return `
