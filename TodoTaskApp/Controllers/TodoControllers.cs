@@ -9,11 +9,14 @@ namespace TodoTaskApp.Controllers
     public class TodoController : Controller
     {
         private readonly ITodoTaskService _todoTaskService;
+        private readonly ITodoTaskDocumentService _documentService;
+
         private readonly ILogger<TodoController> _logger;
 
-        public TodoController(ITodoTaskService todoTaskService, ILogger<TodoController> logger)
+        public TodoController(ITodoTaskService todoTaskService, ITodoTaskDocumentService documentService, ILogger<TodoController> logger)
         {
             _todoTaskService = todoTaskService;
+            _documentService = documentService;
             _logger = logger;
         }
 
@@ -38,12 +41,30 @@ namespace TodoTaskApp.Controllers
 
         // AJAX: Get all tasks
         [HttpGet]
+        [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
             try
             {
                 var tasks = await _todoTaskService.GetAllTasksAsync();
-                return Json(new { success = true, data = tasks });
+                var taskIds = tasks.Select(t => t.Id);
+                var documentCounts = await _documentService.GetDocumentCountsForTasksAsync(taskIds);
+
+                var tasksWithCounts = tasks.Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.Priority,
+                    t.Status,
+                    t.DueDate,
+                    t.CreatedDate,
+                    t.UpdatedDate,
+                    t.CompletedDate,
+                    DocumentCount = documentCounts.ContainsKey(t.Id) ? documentCounts[t.Id] : 0
+                });
+
+                return Json(new { success = true, data = tasksWithCounts });
             }
             catch (Exception ex)
             {
@@ -51,7 +72,6 @@ namespace TodoTaskApp.Controllers
                 return Json(new { success = false, message = "Error retrieving tasks" });
             }
         }
-
         // AJAX: Get task by ID
         [HttpGet]
         public async Task<IActionResult> GetTask(int id)
@@ -384,6 +404,154 @@ namespace TodoTaskApp.Controllers
 
             return Json(new { success = true, data = tasks });
         }
+
+        // AJAX: Get documents by task ID
+        [HttpGet]
+        public async Task<IActionResult> GetTaskDocuments(int taskId)
+        {
+            try
+            {
+                var documents = await _documentService.GetDocumentsByTaskIdAsync(taskId);
+                var documentCount = await _documentService.GetDocumentCountByTaskAsync(taskId);
+
+                return Json(new
+                {
+                    success = true,
+                    data = documents,
+                    count = documentCount
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving documents for task {TaskId}", taskId);
+                return Json(new { success = false, message = "Error retrieving documents" });
+            }
+        }
+
+        // AJAX: Upload document
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadDocument([FromForm] DocumentUploadViewModel model)
+        {
+            try
+            {
+                var documentId = await _documentService.UploadDocumentAsync(model);
+                var documents = await _documentService.GetDocumentsByTaskIdAsync(model.TaskId);
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Document uploaded successfully",
+                    data = documents
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading document for task {TaskId}", model.TaskId);
+                return Json(new { success = false, message = "Error uploading document" });
+            }
+        }
+
+        // AJAX: Delete document
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDocument(int id, int taskId)
+        {
+            try
+            {
+                var success = await _documentService.DeleteDocumentAsync(id);
+
+                if (success)
+                {
+                    var documents = await _documentService.GetDocumentsByTaskIdAsync(taskId);
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Document deleted successfully",
+                        data = documents
+                    });
+                }
+
+                return Json(new { success = false, message = "Failed to delete document" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting document {DocumentId}", id);
+                return Json(new { success = false, message = "Error deleting document" });
+            }
+        }
+
+        // Download document
+        [HttpGet]
+        public async Task<IActionResult> DownloadDocument(int id)
+        {
+            try
+            {
+                var document = await _documentService.GetDocumentByIdAsync(id);
+
+                if (document == null)
+                    return NotFound();
+
+                return File(document.DocumentData, document.ContentType, document.DocumentName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading document {DocumentId}", id);
+                return NotFound();
+            }
+        }
+
+        // AJAX: Replace/Update existing document
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReplaceDocument([FromForm] int documentId, [FromForm] IFormFile newFile)
+        {
+            try
+            {
+                if (newFile == null || newFile.Length == 0)
+                    return Json(new { success = false, message = "Please select a file" });
+
+                // Check file size (5MB limit)
+                const long maxFileSize = 5 * 1024 * 1024;
+                if (newFile.Length > maxFileSize)
+                    return Json(new { success = false, message = "File size cannot exceed 5MB" });
+
+                // Get existing document to preserve TaskId and other relationships
+                var existingDoc = await _documentService.GetDocumentByIdAsync(documentId);
+                if (existingDoc == null)
+                    return Json(new { success = false, message = "Document not found" });
+
+                // Replace the document
+                var success = await _documentService.ReplaceDocumentAsync(documentId, newFile);
+
+                if (success)
+                {
+                    var documents = await _documentService.GetDocumentsByTaskIdAsync(existingDoc.TaskId);
+                    return Json(new
+                    {
+                        success = true,
+                        message = "Document replaced successfully",
+                        data = documents
+                    });
+                }
+
+                return Json(new { success = false, message = "Failed to replace document" });
+            }
+            catch (ArgumentException ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error replacing document {DocumentId}", documentId);
+                return Json(new { success = false, message = "Error replacing document" });
+            }
+        }
+
 
     }
 }

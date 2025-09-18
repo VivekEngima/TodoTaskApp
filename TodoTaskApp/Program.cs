@@ -14,6 +14,10 @@ builder.Services.AddScoped<DapperContext>();
 
 builder.Services.AddScoped<ITodoTaskRepository, TodoTaskRepository>();
 builder.Services.AddScoped<ITodoTaskService, TodoTaskService>();
+// Add document repositories and services
+builder.Services.AddScoped<ITodoTaskDocumentRepository, TodoTaskDocumentRepository>();
+builder.Services.AddScoped<ITodoTaskDocumentService, TodoTaskDocumentService>();
+
 
 // Add JSON options for better serialization
 builder.Services.AddControllers()

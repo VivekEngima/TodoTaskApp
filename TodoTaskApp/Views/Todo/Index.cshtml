@@ -109,8 +109,9 @@
                             <tr>
                                 <th style="width: 40%">Tasks</th>
                                 <th style="width: 15%">Priority</th>
-                                <th style="width: 15%">Status</th>
-                                <th style="width: 20%">Due / Complete On</th>
+                                <th style="width: 10%">Status</th>
+                                <th style="width: 15%">Due On</th>
+                                <th style="width: 10%">Documents</th>
                                 <th style="width: 10%">Actions</th>
                             </tr>
                         </thead>
@@ -126,13 +127,14 @@
 
 <!-- Task Modal -->
 @await Html.PartialAsync("_TaskModal")
+<!-- Document Modal -->
+@await Html.PartialAsync("_DocumentModal")
+
 
 <!-- Loading Spinner -->
 <div class="d-none" id="loadingSpinner">
     <div class="position-fixed top-50 start-50 translate-middle">
-        <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
-        </div>
     </div>
 </div>
 
