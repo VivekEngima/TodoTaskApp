@@ -4,15 +4,14 @@ namespace TodoTaskApp.IRepository
 {
     public interface ITodoTaskRepository
     {
-        Task<IEnumerable<TodoTask>> GetAllAsync();
-        Task<TodoTask?> GetByIdAsync(int id);
-        Task<int> CreateAsync(TodoTask task);
-        Task<bool> UpdateAsync(TodoTask task);
-        Task<bool> DeleteAsync(int id);
-        Task<bool> UpdateStatusAsync(int id, string status);
-        Task<IEnumerable<TodoTask>> FilterTasksAsync(string? status, string? priority, string? searchTerm);
-        // Filter tasks by a specific date range
-        Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(FilterViewModel filter);
-        Task<bool> CheckDuplicateByTitleAsync(string title);
+        Task<IEnumerable<TodoTask>> GetAllTasksAsync(int userId);
+        Task<TodoTask?> GetTaskByIdAsync(int id, int userId);
+        Task<int> CreateTaskAsync(TodoTaskViewModel task, int userId);
+        Task<bool> UpdateTaskAsync(TodoTaskViewModel task, int userId);
+        Task<bool> DeleteTaskAsync(int id, int userId);
+        Task<bool> UpdateTaskStatusAsync(int id, string status, int userId);
+        Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId);
+        Task<IEnumerable<TodoTask>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId);
+        Task<bool> CheckDuplicateTaskAsync(string title, int? excludeId, int userId);
     }
 }

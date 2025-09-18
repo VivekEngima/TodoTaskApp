@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using System.Text;
+using TodoTaskApp.Extensions;
 using TodoTaskApp.IServices;
 using TodoTaskApp.Models;
 
@@ -24,13 +25,30 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var tasks = await _todoTaskService.GetAllTasksAsync();
+                var userId = User.GetUserId();
+                var tasks = await _todoTaskService.GetAllTasksAsync(userId);
+
+                // Map TodoTask to TodoTaskViewModel
+                var taskViewModels = tasks.Select(t => new TodoTaskViewModel
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    Priority = t.Priority,
+                    Status = t.Status,
+                    DueDate = t.DueDate,
+                    CreatedDate = t.CreatedDate,
+                    UpdatedDate = t.UpdatedDate,
+                    CompletedDate = t.CompletedDate,
+                    UserId = t.UserId
+                }).ToList();
+
                 var filterModel = _todoTaskService.GetFilterOptions();
 
-                ViewBag.Tasks = tasks;
+                ViewBag.Tasks = taskViewModels;
                 ViewBag.Filter = filterModel;
 
-                return View(tasks);
+                return View(taskViewModels);
             }
             catch (Exception ex)
             {
@@ -39,6 +57,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
+
         // AJAX: Get all tasks
         [HttpGet]
         [HttpGet]
@@ -46,7 +65,8 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var tasks = await _todoTaskService.GetAllTasksAsync();
+                var userId = User.GetUserId();
+                var tasks = await _todoTaskService.GetAllTasksAsync(userId);
                 var taskIds = tasks.Select(t => t.Id);
                 var documentCounts = await _documentService.GetDocumentCountsForTasksAsync(taskIds);
 
@@ -78,7 +98,8 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var task = await _todoTaskService.GetTaskByIdAsync(id);
+                var userId = User.GetUserId();
+                var task = await _todoTaskService.GetTaskByIdAsync(id,userId);
                 if (task == null)
                     return Json(new { success = false, message = "Task not found" });
 
@@ -105,12 +126,12 @@ namespace TodoTaskApp.Controllers
                         .Select(e => e.ErrorMessage);
                     return Json(new { success = false, message = "Validation failed", errors = errors });
                 }
-
-                var taskId = await _todoTaskService.CreateTaskAsync(model);
+                var userId = User.GetUserId();
+                var taskId = await _todoTaskService.CreateTaskAsync(model,userId);
 
                 if (taskId > 0)
                 {
-                    var newTask = await _todoTaskService.GetTaskByIdAsync(taskId);
+                    var newTask = await _todoTaskService.GetTaskByIdAsync(taskId, userId);
                     return Json(new { success = true, data = newTask, message = "Task created successfully" });
                 }
 
@@ -137,12 +158,12 @@ namespace TodoTaskApp.Controllers
                         .Select(e => e.ErrorMessage);
                     return Json(new { success = false, message = "Validation failed", errors = errors });
                 }
-
-                var success = await _todoTaskService.UpdateTaskAsync(model);
+                var userId = User.GetUserId();
+                var success = await _todoTaskService.UpdateTaskAsync(model,userId);
 
                 if (success)
                 {
-                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(model.Id);
+                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(model.Id,userId);
                     return Json(new { success = true, data = updatedTask, message = "Task updated successfully" });
                 }
 
@@ -162,7 +183,8 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var success = await _todoTaskService.DeleteTaskAsync(id);
+                var userId = User.GetUserId();
+                var success = await _todoTaskService.DeleteTaskAsync(id, userId);
 
                 if (success)
                     return Json(new { success = true, message = "Task deleted successfully" });
@@ -183,11 +205,12 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var success = await _todoTaskService.UpdateTaskStatusAsync(id, status);
+                var userId = User.GetUserId();
+                var success = await _todoTaskService.UpdateTaskStatusAsync(id, status,userId);
 
                 if (success)
                 {
-                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(id);
+                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(id, userId);
                     return Json(new { success = true, data = updatedTask, message = "Task status updated successfully" });
                 }
 
@@ -206,7 +229,8 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var tasks = await _todoTaskService.FilterTasksAsync(filter);
+                var userId = User.GetUserId();
+                var tasks = await _todoTaskService.FilterTasksAsync(filter, userId);
                 return Json(new { success = true, data = tasks });
             }
             catch (Exception ex)
@@ -243,7 +267,8 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
-                var tasks = await _todoTaskService.GetAllTasksAsync();
+                var userId = User.GetUserId();
+                var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
                 var csv = new StringBuilder();
                 csv.AppendLine("Title,Description,Priority,Status,DueDate,CreatedDate");
@@ -282,6 +307,7 @@ namespace TodoTaskApp.Controllers
                 var line = await reader.ReadLineAsync(); // Skip header
                 int lineNumber = 1;
                 var errors = new List<string>();
+                var userId = User.GetUserId();
 
                 while ((line = await reader.ReadLineAsync()) != null)
                 {
@@ -297,7 +323,7 @@ namespace TodoTaskApp.Controllers
 
                         var title = values[0]?.Trim().Trim('"') ?? "";
                         // Duplicate title check
-                        if (await _todoTaskService.CheckDuplicateTaskAsync(title, null))
+                        if (await _todoTaskService.CheckDuplicateTaskAsync(title, null,userId))
                         {
                             errors.Add($"Line {lineNumber}: Task with title '{title}' already exists");
                             continue;
@@ -336,7 +362,7 @@ namespace TodoTaskApp.Controllers
                 int imported = 0;
                 foreach (var task in tasks)
                 {
-                    var taskId = await _todoTaskService.CreateTaskAsync(task);
+                    var taskId = await _todoTaskService.CreateTaskAsync(task,userId);
                     if (taskId > 0) imported++;
                 }
 
@@ -349,7 +375,7 @@ namespace TodoTaskApp.Controllers
                     success = true,
                     message,
                     imported,
-                    errors = errors.Take(5) // Return first 5 errors
+                    errors = errors.Take(5) // first 5 errors
                 });
             }
             catch (Exception ex)
@@ -398,9 +424,9 @@ namespace TodoTaskApp.Controllers
                     message = "Start date must be on or before End date"
                 });
             }
-
+            var userId = User.GetUserId();
             var tasks = await _todoTaskService
-                .FilterTasksByDateRangeAsync(filter);
+                .FilterTasksByDateRangeAsync(filter,userId);
 
             return Json(new { success = true, data = tasks });
         }

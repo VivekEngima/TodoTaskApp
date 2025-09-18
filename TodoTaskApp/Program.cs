@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using TodoTaskApp.Data;
 using TodoTaskApp.IRepository;
 using TodoTaskApp.IServices;
+using TodoTaskApp.Models;
 using TodoTaskApp.Repository;
 using TodoTaskApp.Services;
 
@@ -18,6 +21,29 @@ builder.Services.AddScoped<ITodoTaskService, TodoTaskService>();
 builder.Services.AddScoped<ITodoTaskDocumentRepository, TodoTaskDocumentRepository>();
 builder.Services.AddScoped<ITodoTaskDocumentService, TodoTaskDocumentService>();
 
+// Add User authentication services
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+// Add Password Hasher
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+// Add Cookie Authentication
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/Auth/Login";
+        options.LogoutPath = "/Auth/Logout";
+        options.AccessDeniedPath = "/Auth/AccessDenied";
+        options.ExpireTimeSpan = TimeSpan.FromHours(24);
+        options.SlidingExpiration = true;
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+    });
+
+// Add Authorization
+builder.Services.AddAuthorization();
 
 // Add JSON options for better serialization
 builder.Services.AddControllers()
@@ -41,15 +67,21 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
+
+// Configure routes
+app.MapControllerRoute(
+    name: "Auth",
+    pattern: "Auth/{action=Login}",
+    defaults: new { controller = "Auth" });
 
 app.MapControllerRoute(
     name: "Todo",
     pattern: "Todo/{action=Index}",
     defaults: new { controller = "Todo" });
 
-
-// Default Home Route
+// Default Home Route - redirect unauthenticated users to login
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Dashboard}/{action=Index}");

@@ -29,5 +29,8 @@ namespace TodoTaskApp.Models
         // Helper lists for dropdowns
         public List<string> StatusOptions { get; set; } = new() { "Pending", "Hold", "Completed" };
         public List<string> PriorityOptions { get; set; } = new() { "High", "Normal", "Low" };
+
+        public IEnumerable<string> Priorities { get; set; } = new List<string>();
+        public IEnumerable<string> Statuses { get; set; } = new List<string>();
     }
 }

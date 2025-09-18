@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using TodoTaskApp.Extensions;
 using TodoTaskApp.IServices;
 
 namespace TodoTaskApp.Controllers
 {
+    [Authorize]
     public class DashboardController : Controller
     {
         private readonly ITodoTaskService _todoTaskService;
@@ -15,24 +18,29 @@ namespace TodoTaskApp.Controllers
         }
 
         // Dashboard main page
-        public IActionResult Index()
-        {
-            return View();
-        }
-
-        // API endpoint for dashboard statistics
-        [HttpGet]
-        public async Task<IActionResult> GetStatistics()
+        public async Task<IActionResult> Index()
         {
             try
             {
-                var statistics = await _todoTaskService.GetDashboardStatisticsAsync();
-                return Json(new { success = true, data = statistics });
+                var userId = User.GetUserId();
+                var tasks = await _todoTaskService.GetAllTasksAsync(userId);
+
+                // Dashboard statistics
+                ViewBag.TotalTasks = tasks.Count();
+                ViewBag.CompletedTasks = tasks.Count(t => t.Status == "Completed");
+                ViewBag.PendingTasks = tasks.Count(t => t.Status == "Pending");
+                ViewBag.OverdueTasks = tasks.Count(t => t.DueDate < DateTime.Now && t.Status != "Completed");
+                ViewBag.Username = User.GetUsername();
+
+                // Recent tasks (last 5)
+                ViewBag.RecentTasks = tasks.OrderByDescending(t => t.CreatedDate).Take(5);
+
+                return View(tasks);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving dashboard statistics");
-                return Json(new { success = false, message = "Error loading dashboard statistics" });
+                _logger.LogError(ex, "Error loading dashboard for user {UserId}", User.GetUserId());
+                return View();
             }
         }
     }

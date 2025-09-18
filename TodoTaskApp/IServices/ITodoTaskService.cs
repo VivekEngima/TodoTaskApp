@@ -4,19 +4,15 @@ namespace TodoTaskApp.IServices
 {
     public interface ITodoTaskService
     {
-        Task<IEnumerable<TodoTaskViewModel>> GetAllTasksAsync();
-        Task<TodoTaskViewModel?> GetTaskByIdAsync(int id);
-        Task<int> CreateTaskAsync(TodoTaskViewModel model);
-        Task<bool> UpdateTaskAsync(TodoTaskViewModel model);
-        Task<bool> DeleteTaskAsync(int id);
-        Task<bool> UpdateTaskStatusAsync(int id, string status);
-        Task<IEnumerable<TodoTaskViewModel>> FilterTasksAsync(FilterViewModel filter);
+        Task<IEnumerable<TodoTask>> GetAllTasksAsync(int userId);
+        Task<TodoTask?> GetTaskByIdAsync(int id, int userId);
+        Task<int> CreateTaskAsync(TodoTaskViewModel task, int userId);
+        Task<bool> UpdateTaskAsync(TodoTaskViewModel task, int userId);
+        Task<bool> DeleteTaskAsync(int id, int userId);
+        Task<bool> UpdateTaskStatusAsync(int id, string status, int userId);
+        Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId);
+        Task<IEnumerable<TodoTask>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId);
+        Task<bool> CheckDuplicateTaskAsync(string title, int? excludeId, int userId);
         FilterViewModel GetFilterOptions();
-
-        Task<DashboardViewModel> GetDashboardStatisticsAsync();
-        Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(FilterViewModel filter);
-        Task<bool> CheckDuplicateTaskAsync(string title, string? description);
-
-
     }
 }

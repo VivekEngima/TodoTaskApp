@@ -29,5 +29,9 @@ namespace TodoTaskApp.Models
         public DateTime? UpdatedDate { get; set; }
 
         public DateTime? CompletedDate { get; set; }
+
+        [Required]
+        public int UserId { get; set; }
+        public User? User { get; set; }
     }
 }

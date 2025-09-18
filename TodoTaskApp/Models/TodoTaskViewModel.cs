@@ -36,5 +36,8 @@ namespace TodoTaskApp.Models
         public string FormattedDueDate => DueDate.ToString("dd-MMM-yyyy");
         public string FormattedCreatedDate => CreatedDate.ToString("dd-MMM-yyyy");
         public string FormattedCompletedDate => CompletedDate?.ToString("dd-MMM-yyyy") ?? "";
+
+        public int UserId { get; set; }
+
     }
 }

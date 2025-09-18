@@ -15,122 +15,174 @@ namespace TodoTaskApp.Repository
             _context = context;
         }
 
-        public async Task<IEnumerable<TodoTask>> GetAllAsync()
+        public async Task<bool> CheckDuplicateTaskAsync(string title, int? excludeId, int userId)
         {
+            var query = @"
+                SELECT COUNT(1) 
+                FROM TodoTasks 
+                WHERE UserId = @UserId 
+                AND Title = @Title 
+                AND (@ExcludeId IS NULL OR Id != @ExcludeId)";
+
             using var connection = _context.CreateConnection();
-            return await connection.QueryAsync<TodoTask>(
-                "sp_GetAllTasks",
-                commandType: CommandType.StoredProcedure);
-        }
-
-        public async Task<TodoTask?> GetByIdAsync(int id)
-        {
-            using var connection = _context.CreateConnection();
-            return await connection.QuerySingleOrDefaultAsync<TodoTask>(
-                "sp_GetTaskById",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-        }
-
-        public async Task<int> CreateAsync(TodoTask task)
-        {
-            using var connection = _context.CreateConnection();
-            var parameters = new DynamicParameters();
-            parameters.Add("@Title", task.Title);
-            parameters.Add("@Description", task.Description);
-            parameters.Add("@Priority", task.Priority);
-            parameters.Add("@Status", task.Status);
-            parameters.Add("@DueDate", task.DueDate);
-
-            var result = await connection.QuerySingleOrDefaultAsync<int>(
-                "sp_InsertTask",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-
-        public async Task<bool> UpdateAsync(TodoTask task)
-        {
-            using var connection = _context.CreateConnection();
-            var parameters = new DynamicParameters();
-            parameters.Add("@Id", task.Id);
-            parameters.Add("@Title", task.Title);
-            parameters.Add("@Description", task.Description);
-            parameters.Add("@Priority", task.Priority);
-            parameters.Add("@Status", task.Status);
-            parameters.Add("@DueDate", task.DueDate);
-
-            var result = await connection.QuerySingleOrDefaultAsync<int>(
-                "sp_UpdateTask",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            return result > 0;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            using var connection = _context.CreateConnection();
-            var result = await connection.QuerySingleOrDefaultAsync<int>(
-                "sp_DeleteTask",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-
-            return result > 0;
-        }
-
-        public async Task<bool> UpdateStatusAsync(int id, string status)
-        {
-            using var connection = _context.CreateConnection();
-            var parameters = new DynamicParameters();
-            parameters.Add("@Id", id);
-            parameters.Add("@Status", status);
-
-            var result = await connection.QuerySingleOrDefaultAsync<int>(
-                "sp_UpdateTaskStatus",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-
-            return result > 0;
-        }
-
-        public async Task<IEnumerable<TodoTask>> FilterTasksAsync(string? status, string? priority, string? searchTerm)
-        {
-            using var connection = _context.CreateConnection();
-            var parameters = new DynamicParameters();
-            parameters.Add("@Status", status == "All" ? null : status);
-            parameters.Add("@Priority", priority == "All" ? null : priority);
-            parameters.Add("@SearchTerm", string.IsNullOrEmpty(searchTerm) ? null : searchTerm);
-
-            return await connection.QueryAsync<TodoTask>(
-                "sp_FilterTasks",
-                parameters,
-                commandType: CommandType.StoredProcedure);
-        }
-        public async Task<IEnumerable<TodoTaskViewModel>> FilterTasksByDateRangeAsync(
-    FilterViewModel filter)
-        {
-            using var conn = _context.CreateConnection();
-            var p = new DynamicParameters();
-            p.Add("@Status", (object?)filter.Status);
-            p.Add("@Priority", (object?)filter.Priority);
-            p.Add("@SearchTerm", (object?)filter.SearchTerm);
-            p.Add("@StartDate", (object?)filter.StartDate);
-            p.Add("@EndDate", (object?)filter.EndDate);
-
-            return await conn.QueryAsync<TodoTaskViewModel>(
-                "sp_FilterTasksByDateRange",
-                p,
-                commandType: CommandType.StoredProcedure
+            var count = await connection.QuerySingleAsync<int>(
+                query,
+                new { Title = title, ExcludeId = excludeId, UserId = userId }
             );
-        }
-        public async Task<bool> CheckDuplicateByTitleAsync(string title)
-        {
-            using var conn = _context.CreateConnection();
-            var sql = "SELECT COUNT(*) FROM TodoTasks WHERE Title = @Title";
-            var count = await conn.ExecuteScalarAsync<int>(sql, new { Title = title });
+
             return count > 0;
         }
+
+        public async Task<int> CreateTaskAsync(TodoTaskViewModel task, int userId)
+        {
+            var query = "CreateTodoTask";
+
+            using var connection = _context.CreateConnection();
+            var taskId = await connection.QuerySingleAsync<int>(
+                query,
+                new
+                {
+                    Title = task.Title,
+                    Description = task.Description,
+                    Priority = task.Priority,
+                    Status = task.Status,
+                    DueDate = task.DueDate,
+                    UserId = userId
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return taskId;
+        }
+
+        public async Task<bool> DeleteTaskAsync(int id, int userId)
+        {
+            var query = "DeleteTodoTask";
+
+            using var connection = _context.CreateConnection();
+            var affectedRows = await connection.ExecuteAsync(
+                query,
+                new { Id = id, UserId = userId },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return affectedRows > 0;
+        }
+
+        public async Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId)
+        {
+            var query = @"
+                SELECT Id, Title, Description, Priority, Status, DueDate, CreatedDate, UpdatedDate, CompletedDate, UserId
+                FROM TodoTasks 
+                WHERE UserId = @UserId
+                AND (@Priority IS NULL OR Priority = @Priority)
+                AND (@Status IS NULL OR Status = @Status)
+                AND (@SearchTerm IS NULL OR Title LIKE '%' + @SearchTerm + '%' OR Description LIKE '%' + @SearchTerm + '%')
+                ORDER BY CreatedDate DESC";
+
+            using var connection = _context.CreateConnection();
+            var tasks = await connection.QueryAsync<TodoTask>(
+                query,
+                new
+                {
+                    UserId = userId,
+                    Priority = string.IsNullOrEmpty(filter.Priority) ? null : filter.Priority,
+                    Status = string.IsNullOrEmpty(filter.Status) ? null : filter.Status,
+                    SearchTerm = string.IsNullOrEmpty(filter.SearchTerm) ? null : filter.SearchTerm
+                }
+            );
+
+            return tasks;
+        }
+
+        public async Task<IEnumerable<TodoTask>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId)
+        {
+            var query = @"
+                SELECT Id, Title, Description, Priority, Status, DueDate, CreatedDate, UpdatedDate, CompletedDate, UserId
+                FROM TodoTasks 
+                WHERE UserId = @UserId
+                AND (@StartDate IS NULL OR DueDate >= @StartDate)
+                AND (@EndDate IS NULL OR DueDate <= @EndDate)
+                ORDER BY DueDate ASC";
+
+            using var connection = _context.CreateConnection();
+            var tasks = await connection.QueryAsync<TodoTask>(
+                query,
+                new
+                {
+                    UserId = userId,
+                    StartDate = filter.StartDate,
+                    EndDate = filter.EndDate
+                }
+            );
+
+            return tasks;
+        }
+
+        public async Task<IEnumerable<TodoTask>> GetAllTasksAsync(int userId)
+        {
+            var query = "GetAllTodoTasks";
+
+            using var connection = _context.CreateConnection();
+            var tasks = await connection.QueryAsync<TodoTask>(
+                query,
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return tasks;
+        }
+
+        public async Task<TodoTask?> GetTaskByIdAsync(int id, int userId)
+        {
+            var query = "GetTodoTaskById";
+
+            using var connection = _context.CreateConnection();
+            var task = await connection.QueryFirstOrDefaultAsync<TodoTask>(
+                query,
+                new { Id = id, UserId = userId },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return task;
+        }
+
+        public async Task<bool> UpdateTaskAsync(TodoTaskViewModel task, int userId)
+        {
+            var query = "UpdateTodoTask";
+
+            using var connection = _context.CreateConnection();
+            var affectedRows = await connection.ExecuteAsync(
+                query,
+                new
+                {
+                    Id = task.Id,
+                    Title = task.Title,
+                    Description = task.Description,
+                    Priority = task.Priority,
+                    Status = task.Status,
+                    DueDate = task.DueDate,
+                    UserId = userId
+                },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return affectedRows > 0;
+        }
+
+        public async Task<bool> UpdateTaskStatusAsync(int id, string status, int userId)
+        {
+            var query = "UpdateTodoTaskStatus";
+
+            using var connection = _context.CreateConnection();
+            var affectedRows = await connection.ExecuteAsync(
+                query,
+                new { Id = id, Status = status, UserId = userId },
+                commandType: CommandType.StoredProcedure
+            );
+
+            return affectedRows > 0;
+        }
+
     }
 }
