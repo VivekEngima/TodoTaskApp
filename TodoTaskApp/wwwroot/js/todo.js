@@ -39,7 +39,7 @@
         loadAllTodos();
       });
 
-    // Document upload form
+    // Documeunt upload form
     $("#documentUploadForm")
       .off("submit")
       .on("submit", function (e) {
@@ -319,8 +319,10 @@
                     </td>
                 </tr>
             `);
+      // location.reload();
     } else {
       tasks.forEach((t) => tbody.append(createTodoTaskRow(t)));
+      // location.reload();
     }
     updateTodoTaskCount(tasks.length);
   }
@@ -569,6 +571,7 @@
           loadAllTodos();
           showTodoAlert(res.message, "success");
         } else showTodoTaskFormErrors(res.errors || [res.message]);
+        location.reload();
       })
       .fail(() => showTodoAlert("Error saving", "danger"))
       .always(() => btn.prop("disabled", false).html(txt));
@@ -981,6 +984,7 @@
       contentType: "application/json",
       data: JSON.stringify(task),
     })
+
       .done((res) => cb(res.success))
       .fail(() => cb(false));
   }

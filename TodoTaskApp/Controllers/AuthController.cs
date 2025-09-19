@@ -116,12 +116,11 @@ namespace TodoTaskApp.Controllers
 
                 _logger.LogInformation("New user {Username} registered successfully", result.User!.Username);
 
-                // Auto login after successful signup
+                // after successful signup
                 var loginModel = new LoginViewModel
                 {
                     Username = model.Username,
-                    Password = model.Password,
-                    RememberMe = false
+                    Password = model.Password
                 };
 
                 var loginResult = await _userService.LoginAsync(loginModel);

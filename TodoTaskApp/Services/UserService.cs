@@ -126,7 +126,7 @@ namespace TodoTaskApp.Services
                     Message = "An error occurred during signup"
                 };
             }
-        }
+            }
 
         public async Task<User?> GetUserByUsernameAsync(string username)
         {
