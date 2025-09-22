@@ -183,6 +183,5 @@ namespace TodoTaskApp.Repository
 
             return affectedRows > 0;
         }
-
     }
 }

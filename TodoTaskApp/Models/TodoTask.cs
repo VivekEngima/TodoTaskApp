@@ -34,4 +34,22 @@ namespace TodoTaskApp.Models
         public int UserId { get; set; }
         public User? User { get; set; }
     }
+    public class TodoTaskWithAssignmentInfo
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Priority { get; set; } = "Normal";
+        public string Status { get; set; } = "Pending";
+        public DateTime DueDate { get; set; }
+        public DateTime CreatedDate { get; set; }
+        public DateTime? UpdatedDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public int UserId { get; set; }
+
+        // Assignment-related properties from stored procedure
+        public string CreatedByUsername { get; set; } = string.Empty;
+        public bool IsAssigned { get; set; } = false;
+        public int AssignmentCount { get; set; } = 0;
+    }
 }

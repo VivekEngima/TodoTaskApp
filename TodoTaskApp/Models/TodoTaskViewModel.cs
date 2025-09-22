@@ -22,22 +22,21 @@ namespace TodoTaskApp.Models
         public string Status { get; set; } = "Pending";
 
         [Required]
-        [Display(Name = "Due Date")]
-        [DataType(DataType.Date)]
         public DateTime DueDate { get; set; } = DateTime.Now.AddDays(7);
 
-        public DateTime CreatedDate { get; set; }
-
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
         public DateTime? UpdatedDate { get; set; }
-
         public DateTime? CompletedDate { get; set; }
 
-        // For displaying formatted dates
-        public string FormattedDueDate => DueDate.ToString("dd-MMM-yyyy");
-        public string FormattedCreatedDate => CreatedDate.ToString("dd-MMM-yyyy");
-        public string FormattedCompletedDate => CompletedDate?.ToString("dd-MMM-yyyy") ?? "";
-
+        [Required]
         public int UserId { get; set; }
 
+        // Assignment-related properties (NEW)
+        public string CreatedByUsername { get; set; } = string.Empty;
+        public bool IsAssigned { get; set; } = false;
+        public int AssignmentCount { get; set; } = 0;
+        public List<int> AssignedUserIds { get; set; } = new List<int>();
+        public List<TaskAssignmentViewModel> Assignments { get; set; } = new List<TaskAssignmentViewModel>();
+        public int DocumentCount { get; set; } = 0;
     }
 }

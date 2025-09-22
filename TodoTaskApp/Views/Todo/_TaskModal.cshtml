@@ -1,85 +1,185 @@
-﻿<!-- Task Create/Edit Modal -->
+﻿<!-- Updated _TaskModal.cshtml with proper assignment dropdown -->
 <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="taskForm">
                 @Html.AntiForgeryToken()
+                <input type="hidden" id="taskId" name="Id" value="0" />
+
                 <div class="modal-header">
                     <h5 class="modal-title" id="taskModalLabel">
-                        <i class="fas fa-plus-circle me-2"></i>Add New Task
+                        <i class="bi bi-plus-circle me-2"></i>Add New Task
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
                 <div class="modal-body">
-                    <input type="hidden" id="taskId" name="Id" value="0" />
-
-                    <div class="mb-3">
-                        <label for="taskTitle" class="form-label">
-                            <i class="fas fa-heading me-1"></i>Title <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="taskTitle" name="Title"
-                               placeholder="Enter task title..." maxlength="100" required>
-                        <div class="form-text">Maximum 100 characters, no special characters allowed.</div>
-                        <div class="invalid-feedback" id="titleError"></div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="taskDescription" class="form-label">
-                            <i class="fas fa-align-left me-1"></i>Description
-                        </label>
-                        <textarea class="form-control" id="taskDescription" name="Description"
-                                  rows="3" placeholder="Enter task description..." maxlength="500"></textarea>
-                        <div class="form-text">Maximum 500 characters, no special characters allowed.</div>
-                        <div class="invalid-feedback" id="descriptionError"></div>
-                    </div>
+                    <!-- Alert for form errors -->
+                    <div id="taskAlert" class="alert alert-danger d-none" role="alert"></div>
 
                     <div class="row">
+                        <!-- Left column -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="taskPriority" class="form-label">
-                                    <i class="fas fa-flag me-1"></i>Priority
-                                </label>
-                                <select class="form-select" id="taskPriority" name="Priority">
-                                    <option value="High" class="text-danger">High</option>
-                                    <option value="Normal" selected>Normal</option>
-                                    <option value="Low" class="text-info">Low</option>
-                                </select>
+                                <label for="taskTitle" class="form-label">Title *</label>
+                                <input type="text" class="form-control" id="taskTitle" name="Title" maxlength="100" required />
+                                <div class="invalid-feedback" id="titleError"></div>
+                                <small class="form-text text-muted">Maximum 100 characters, no special characters allowed.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="taskDescription" class="form-label">Description</label>
+                                <textarea class="form-control" id="taskDescription" name="Description" rows="3" maxlength="500"></textarea>
+                                <div class="invalid-feedback" id="descriptionError"></div>
+                                <small class="form-text text-muted">Maximum 500 characters, no special characters allowed.</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="taskPriority" class="form-label">Priority</label>
+                                        <select class="form-select" id="taskPriority" name="Priority">
+                                            <option value="High">High</option>
+                                            <option value="Normal" selected>Normal</option>
+                                            <option value="Low">Low</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="taskStatus" class="form-label">Status</label>
+                                        <select class="form-select" id="taskStatus" name="Status">
+                                            <option value="Pending" selected>Pending</option>
+                                            <option value="Hold">Hold</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="taskDueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control" id="taskDueDate" name="DueDate" required />
+                                <div class="invalid-feedback" id="dueDateError"></div>
+                                <small class="form-text text-muted">Default is 7 days from today.</small>
                             </div>
                         </div>
+
+                        <!-- Right column - Assignment section -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="taskStatus" class="form-label">
-                                    <i class="fas fa-info-circle me-1"></i>Status
+                                <label class="form-label d-flex align-items-center">
+                                    <i class="bi bi-people me-2 text-primary"></i>
+                                    Assign to Users
                                 </label>
-                                <select class="form-select" id="taskStatus" name="Status">
-                                    <option value="Pending" selected>Pending</option>
-                                    <option value="Hold">Hold</option>
-                                    <option value="Completed">Completed</option>
-                                </select>
+
+                                <!-- Assignment controls -->
+                                <div class="border rounded p-3 bg-light">
+                                    <!-- Loading state -->
+                                    <div id="assignmentLoading" class="text-center py-2 d-none">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        <small>Loading users...</small>
+                                    </div>
+
+                                    <!-- User selection -->
+                                    <div id="assignmentSection">
+                                        <small class="form-text text-muted mb-2 d-block">
+                                            Select users to assign this task to:
+                                        </small>
+
+                                        <div id="userAssignmentList" class="user-assignment-list" style="max-height: 150px; overflow-y: auto;">
+                                            <!-- Users will be populated here via JavaScript -->
+                                            <div class="text-muted text-center py-2">
+                                                <i class="bi bi-hourglass-split"></i> Loading users...
+                                            </div>
+                                        </div>
+
+                                        <small class="form-text text-muted mt-2 d-block">
+                                            All assigned users will have full access to edit this task.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current assignments display (for edit mode) -->
+                            <div id="currentAssignments" class="mb-3 d-none">
+                                <label class="form-label text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Current Assignments
+                                </label>
+                                <div id="currentAssignmentsList" class="list-group">
+                                    <!-- Current assignments will be shown here -->
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="taskDueDate" class="form-label">
-                            <i class="fas fa-calendar-alt me-1"></i>Due Date <span class="text-danger">*</span>
-                        </label>
-                        <input type="date" class="form-control" id="taskDueDate" name="DueDate" required>
-                        <div class="form-text">Default is 7 days from today.</div>
-                        <div class="invalid-feedback" id="dueDateError"></div>
-                    </div>
-
-                    <div class="alert alert-info d-none" id="taskAlert"></div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
+                        <i class="bi bi-x-circle me-1"></i>Cancel
                     </button>
                     <button type="submit" class="btn btn-primary" id="saveTaskBtn">
-                        <i class="fas fa-save me-1"></i>Save Task
+                        <i class="bi bi-check-circle me-1"></i>Save Task
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<!-- CSS for assignment UI -->
+<style>
+    .user-assignment-list {
+        border: 1px solid #e3e6ea;
+        border-radius: 6px;
+        background: white;
+    }
+
+    .user-assignment-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+
+        .user-assignment-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-assignment-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .user-assignment-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .user-assignment-item label {
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+    .current-assignment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+
+    .assignment-badge {
+        font-size: 0.75rem;
+    }
+
+    /* Loading state */
+    .assignment-loading {
+        text-align: center;
+        padding: 1rem;
+        color: #6c757d;
+    }
+</style>

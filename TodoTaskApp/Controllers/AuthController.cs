@@ -162,10 +162,6 @@ namespace TodoTaskApp.Controllers
             {
                 var username = User.Identity?.Name;
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-
-                _logger.LogInformation("User {Username} logged out successfully", username);
-
-                TempData["InfoMessage"] = "You have been logged out successfully.";
                 return RedirectToAction("Login", "Auth");
             }
             catch (Exception ex)

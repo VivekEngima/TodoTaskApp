@@ -25,6 +25,10 @@ builder.Services.AddScoped<ITodoTaskDocumentService, TodoTaskDocumentService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+// ADD Task Assignment services
+builder.Services.AddScoped<ITaskAssignmentRepository, TaskAssignmentRepository>();
+builder.Services.AddScoped<ITaskAssignmentService, TaskAssignmentService>();
+
 // Add Password Hasher
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -78,8 +82,9 @@ app.MapControllerRoute(
 
 app.MapControllerRoute(
     name: "Todo",
-    pattern: "Todo/{action=Index}",
-    defaults: new { controller = "Todo" });
+    pattern: "Todo/{action}/{id?}",
+    defaults: new { controller = "Todo", action = "Index" }
+);
 
 // Default Home Route - redirect unauthenticated users to login
 app.MapControllerRoute(

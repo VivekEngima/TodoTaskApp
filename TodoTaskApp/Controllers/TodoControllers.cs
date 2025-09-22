@@ -11,13 +11,18 @@ namespace TodoTaskApp.Controllers
     {
         private readonly ITodoTaskService _todoTaskService;
         private readonly ITodoTaskDocumentService _documentService;
-
+        private readonly ITaskAssignmentService _taskAssignmentService;
         private readonly ILogger<TodoController> _logger;
 
-        public TodoController(ITodoTaskService todoTaskService, ITodoTaskDocumentService documentService, ILogger<TodoController> logger)
+        public TodoController(
+            ITodoTaskService todoTaskService,
+            ITodoTaskDocumentService documentService,
+            ITaskAssignmentService taskAssignmentService,
+            ILogger<TodoController> logger)
         {
             _todoTaskService = todoTaskService;
             _documentService = documentService;
+            _taskAssignmentService = taskAssignmentService;
             _logger = logger;
         }
 
@@ -28,20 +33,33 @@ namespace TodoTaskApp.Controllers
                 var userId = User.GetUserId();
                 var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
-                // Map TodoTask to TodoTaskViewModel
-                var taskViewModels = tasks.Select(t => new TodoTaskViewModel
+                // Map TodoTaskWithAssignmentInfo to TodoTaskViewModel with assignment info
+                var taskViewModels = new List<TodoTaskViewModel>();
+
+                foreach (var t in tasks)
                 {
-                    Id = t.Id,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Priority = t.Priority,
-                    Status = t.Status,
-                    DueDate = t.DueDate,
-                    CreatedDate = t.CreatedDate,
-                    UpdatedDate = t.UpdatedDate,
-                    CompletedDate = t.CompletedDate,
-                    UserId = t.UserId
-                }).ToList();
+                    var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(t.Id);
+                    var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(t.Id);
+
+                    taskViewModels.Add(new TodoTaskViewModel
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        Description = t.Description,
+                        Priority = t.Priority,
+                        Status = t.Status,
+                        DueDate = t.DueDate,
+                        CreatedDate = t.CreatedDate,
+                        UpdatedDate = t.UpdatedDate,
+                        CompletedDate = t.CompletedDate,
+                        UserId = t.UserId,
+                        CreatedByUsername = t.CreatedByUsername,
+                        IsAssigned = t.IsAssigned,
+                        AssignmentCount = t.AssignmentCount,
+                        AssignedUserIds = assignedUserIds.ToList(),
+                        Assignments = assignments.ToList()
+                    });
+                }
 
                 var filterModel = _todoTaskService.GetFilterOptions();
 
@@ -57,9 +75,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-
-        // AJAX: Get all tasks
-        [HttpGet]
+        // AJAX: Get all tasks with assignment info
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
@@ -70,21 +86,35 @@ namespace TodoTaskApp.Controllers
                 var taskIds = tasks.Select(t => t.Id);
                 var documentCounts = await _documentService.GetDocumentCountsForTasksAsync(taskIds);
 
-                var tasksWithCounts = tasks.Select(t => new
-                {
-                    t.Id,
-                    t.Title,
-                    t.Description,
-                    t.Priority,
-                    t.Status,
-                    t.DueDate,
-                    t.CreatedDate,
-                    t.UpdatedDate,
-                    t.CompletedDate,
-                    DocumentCount = documentCounts.ContainsKey(t.Id) ? documentCounts[t.Id] : 0
-                });
+                var tasksWithInfo = new List<object>();
 
-                return Json(new { success = true, data = tasksWithCounts });
+                foreach (var t in tasks)
+                {
+                    var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(t.Id);
+                    var isSharedTask = assignedUserIds.Any();
+
+                    tasksWithInfo.Add(new
+                    {
+                        t.Id,
+                        t.Title,
+                        t.Description,
+                        t.Priority,
+                        t.Status,
+                        t.DueDate,
+                        t.CreatedDate,
+                        t.UpdatedDate,
+                        t.CompletedDate,
+                        t.UserId,
+                        CreatedByUsername = t.CreatedByUsername,
+                        IsAssigned = t.IsAssigned,
+                        AssignmentCount = t.AssignmentCount,
+                        DocumentCount = documentCounts.ContainsKey(t.Id) ? documentCounts[t.Id] : 0,
+                        AssignedUserIds = assignedUserIds.ToList(),
+                        IsSharedTask = isSharedTask
+                    });
+                }
+
+                return Json(new { success = true, data = tasksWithInfo });
             }
             catch (Exception ex)
             {
@@ -92,18 +122,38 @@ namespace TodoTaskApp.Controllers
                 return Json(new { success = false, message = "Error retrieving tasks" });
             }
         }
-        // AJAX: Get task by ID
+
+        // AJAX: Get task by ID with assignment info
         [HttpGet]
         public async Task<IActionResult> GetTask(int id)
         {
             try
             {
                 var userId = User.GetUserId();
-                var task = await _todoTaskService.GetTaskByIdAsync(id,userId);
+                var task = await _todoTaskService.GetTaskByIdAsync(id, userId);
                 if (task == null)
                     return Json(new { success = false, message = "Task not found" });
 
-                return Json(new { success = true, data = task });
+                var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(id);
+                var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(id);
+
+                var taskWithAssignments = new
+                {
+                    task.Id,
+                    task.Title,
+                    task.Description,
+                    task.Priority,
+                    task.Status,
+                    task.DueDate,
+                    task.CreatedDate,
+                    task.UpdatedDate,
+                    task.CompletedDate,
+                    task.UserId,
+                    AssignedUserIds = assignedUserIds.ToList(),
+                    Assignments = assignments.ToList()
+                };
+
+                return Json(new { success = true, data = taskWithAssignments });
             }
             catch (Exception ex)
             {
@@ -112,7 +162,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Create new task
+        // AJAX: Create new task with assignments
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTask([FromBody] TodoTaskViewModel model)
@@ -126,8 +176,9 @@ namespace TodoTaskApp.Controllers
                         .Select(e => e.ErrorMessage);
                     return Json(new { success = false, message = "Validation failed", errors = errors });
                 }
+
                 var userId = User.GetUserId();
-                var taskId = await _todoTaskService.CreateTaskAsync(model,userId);
+                var taskId = await _todoTaskService.CreateTaskAsync(model, userId);
 
                 if (taskId > 0)
                 {
@@ -144,7 +195,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Update task 
+        // AJAX: Update task with assignments
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateTask([FromBody] TodoTaskViewModel model)
@@ -158,12 +209,13 @@ namespace TodoTaskApp.Controllers
                         .Select(e => e.ErrorMessage);
                     return Json(new { success = false, message = "Validation failed", errors = errors });
                 }
+
                 var userId = User.GetUserId();
-                var success = await _todoTaskService.UpdateTaskAsync(model,userId);
+                var success = await _todoTaskService.UpdateTaskAsync(model, userId);
 
                 if (success)
                 {
-                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(model.Id,userId);
+                    var updatedTask = await _todoTaskService.GetTaskByIdAsync(model.Id, userId);
                     return Json(new { success = true, data = updatedTask, message = "Task updated successfully" });
                 }
 
@@ -176,7 +228,49 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Delete task
+        // AJAX: Get users for assignment dropdown
+        [HttpGet]
+        public async Task<IActionResult> GetUsersForAssignment()
+        {
+            try
+            {
+                var userId = User.GetUserId();
+                var users = await _taskAssignmentService.GetAllUsersForAssignmentAsync(userId);
+                return Json(new { success = true, data = users });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting users for assignment");
+                return Json(new { success = false, message = "Error loading users" });
+            }
+        }
+
+        // AJAX: Get task assignments
+        [HttpGet]
+        public async Task<IActionResult> GetTaskAssignments(int taskId)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+
+                // Check if user can access this task
+                var canAccess = await _taskAssignmentService.CanUserAccessTaskAsync(taskId, userId);
+                if (!canAccess)
+                {
+                    return Json(new { success = false, message = "Access denied" });
+                }
+
+                var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(taskId);
+                return Json(new { success = true, data = assignments });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting task assignments for task {TaskId}", taskId);
+                return Json(new { success = false, message = "Error getting assignments" });
+            }
+        }
+
+        // AJAX: Delete task (with access check)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteTask(int id)
@@ -198,7 +292,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Update task status
+        // AJAX: Update task status (with access check)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateTaskStatus(int id, string status)
@@ -206,7 +300,7 @@ namespace TodoTaskApp.Controllers
             try
             {
                 var userId = User.GetUserId();
-                var success = await _todoTaskService.UpdateTaskStatusAsync(id, status,userId);
+                var success = await _todoTaskService.UpdateTaskStatusAsync(id, status, userId);
 
                 if (success)
                 {
@@ -223,7 +317,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Filter tasks
+        // AJAX: Filter tasks (now includes assigned tasks)
         [HttpPost]
         public async Task<IActionResult> FilterTasks([FromBody] FilterViewModel filter)
         {
@@ -256,12 +350,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-        // Export tasks to CSV
+        // Export tasks (now includes accessible tasks)
         [HttpGet]
         public async Task<IActionResult> ExportTasks()
         {
@@ -271,11 +360,14 @@ namespace TodoTaskApp.Controllers
                 var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
                 var csv = new StringBuilder();
-                csv.AppendLine("Title,Description,Priority,Status,DueDate,CreatedDate");
+                csv.AppendLine("Title,Description,Priority,Status,DueDate,CreatedDate,CreatedBy,IsAssigned");
 
                 foreach (var task in tasks)
                 {
-                    csv.AppendLine($"\"{task.Title}\",\"{task.Description ?? ""}\",\"{task.Priority}\",\"{task.Status}\",\"{task.DueDate:yyyy-MM-dd}\",\"{task.CreatedDate:yyyy-MM-dd}\"");
+                    var createdBy = task.CreatedByUsername;
+                    var isAssigned = task.IsAssigned;
+
+                    csv.AppendLine($"\"{task.Title}\",\"{task.Description ?? ""}\",\"{task.Priority}\",\"{task.Status}\",\"{task.DueDate:yyyy-MM-dd}\",\"{task.CreatedDate:yyyy-MM-dd}\",\"{createdBy}\",\"{(isAssigned ? "Yes" : "No")}\"");
                 }
 
                 var bytes = Encoding.UTF8.GetBytes(csv.ToString());
@@ -323,7 +415,7 @@ namespace TodoTaskApp.Controllers
 
                         var title = values[0]?.Trim().Trim('"') ?? "";
                         // Duplicate title check
-                        if (await _todoTaskService.CheckDuplicateTaskAsync(title, null,userId))
+                        if (await _todoTaskService.CheckDuplicateTaskAsync(title, null, userId))
                         {
                             errors.Add($"Line {lineNumber}: Task with title '{title}' already exists");
                             continue;
@@ -336,7 +428,8 @@ namespace TodoTaskApp.Controllers
                             Priority = values[2]?.Trim().Trim('"') ?? "Normal",
                             Status = values[3]?.Trim().Trim('"') ?? "Pending",
                             DueDate = DateTime.TryParse(values[4]?.Trim().Trim('"'), out var dueDate)
-                                ? dueDate : DateTime.Now.AddDays(7)
+                                ? dueDate : DateTime.Now.AddDays(7),
+                            AssignedUserIds = new List<int>() // No assignments from CSV import
                         };
 
                         // Validate
@@ -362,7 +455,7 @@ namespace TodoTaskApp.Controllers
                 int imported = 0;
                 foreach (var task in tasks)
                 {
-                    var taskId = await _todoTaskService.CreateTaskAsync(task,userId);
+                    var taskId = await _todoTaskService.CreateTaskAsync(task, userId);
                     if (taskId > 0) imported++;
                 }
 
@@ -426,7 +519,7 @@ namespace TodoTaskApp.Controllers
             }
             var userId = User.GetUserId();
             var tasks = await _todoTaskService
-                .FilterTasksByDateRangeAsync(filter,userId);
+                .FilterTasksByDateRangeAsync(filter, userId);
 
             return Json(new { success = true, data = tasks });
         }
@@ -578,6 +671,10 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult Error()
+        {
+            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
     }
 }

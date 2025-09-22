@@ -7,19 +7,26 @@ namespace TodoTaskApp.Services
     public class TodoTaskService : ITodoTaskService
     {
         private readonly ITodoTaskRepository _todoTaskRepository;
+        private readonly ITaskAssignmentRepository _taskAssignmentRepository;
         private readonly ILogger<TodoTaskService> _logger;
 
-        public TodoTaskService(ITodoTaskRepository todoTaskRepository, ILogger<TodoTaskService> logger)
+        public TodoTaskService(
+            ITodoTaskRepository todoTaskRepository,
+            ITaskAssignmentRepository taskAssignmentRepository,
+            ILogger<TodoTaskService> logger)
         {
             _todoTaskRepository = todoTaskRepository;
+            _taskAssignmentRepository = taskAssignmentRepository;
             _logger = logger;
         }
 
-        public async Task<IEnumerable<TodoTask>> GetAllTasksAsync(int userId)
+        // Updated to return TodoTaskWithAssignmentInfo
+        public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> GetAllTasksAsync(int userId)
         {
             try
             {
-                return await _todoTaskRepository.GetAllTasksAsync(userId);
+                // Use the TaskAssignmentRepository method that gets accessible tasks (owned + assigned)
+                return await _taskAssignmentRepository.GetAllAccessibleTasksAsync(userId);
             }
             catch (Exception ex)
             {
@@ -32,6 +39,13 @@ namespace TodoTaskApp.Services
         {
             try
             {
+                // First check if user can access this task using TaskAssignmentRepository
+                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(id, userId);
+                if (!canAccess)
+                {
+                    return null;
+                }
+
                 return await _todoTaskRepository.GetTaskByIdAsync(id, userId);
             }
             catch (Exception ex)
@@ -45,7 +59,21 @@ namespace TodoTaskApp.Services
         {
             try
             {
-                return await _todoTaskRepository.CreateTaskAsync(task, userId);
+                var taskId = await _todoTaskRepository.CreateTaskAsync(task, userId);
+
+                // If task was created successfully and has assignments, handle them
+                if (taskId > 0 && task.AssignedUserIds.Any())
+                {
+                    foreach (var assignedUserId in task.AssignedUserIds)
+                    {
+                        if (assignedUserId != userId) // Don't assign to self
+                        {
+                            await _taskAssignmentRepository.AssignTaskToUserAsync(taskId, assignedUserId, userId);
+                        }
+                    }
+                }
+
+                return taskId;
             }
             catch (Exception ex)
             {
@@ -58,7 +86,39 @@ namespace TodoTaskApp.Services
         {
             try
             {
-                return await _todoTaskRepository.UpdateTaskAsync(task, userId);
+                // Check if user can access this task using TaskAssignmentRepository
+                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(task.Id, userId);
+                if (!canAccess)
+                {
+                    return false;
+                }
+
+                var success = await _todoTaskRepository.UpdateTaskAsync(task, userId);
+
+                // Handle assignment updates if task update was successful
+                if (success)
+                {
+                    // Update assignments - get current assignments first
+                    var currentAssignedUserIds = await _taskAssignmentRepository.GetAssignedUserIdsAsync(task.Id);
+                    var currentSet = new HashSet<int>(currentAssignedUserIds);
+                    var newSet = new HashSet<int>(task.AssignedUserIds.Where(id => id != userId)); // Exclude task owner
+
+                    // Remove users that are no longer assigned
+                    var usersToRemove = currentSet.Except(newSet);
+                    foreach (var assignedUserId in usersToRemove)
+                    {
+                        await _taskAssignmentRepository.RemoveTaskAssignmentAsync(task.Id, assignedUserId);
+                    }
+
+                    // Add new assignments
+                    var usersToAdd = newSet.Except(currentSet);
+                    foreach (var assignedUserId in usersToAdd)
+                    {
+                        await _taskAssignmentRepository.AssignTaskToUserAsync(task.Id, assignedUserId, userId);
+                    }
+                }
+
+                return success;
             }
             catch (Exception ex)
             {
@@ -71,6 +131,13 @@ namespace TodoTaskApp.Services
         {
             try
             {
+                // Check if user can access this task using TaskAssignmentRepository
+                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(id, userId);
+                if (!canAccess)
+                {
+                    return false;
+                }
+
                 return await _todoTaskRepository.DeleteTaskAsync(id, userId);
             }
             catch (Exception ex)
@@ -84,6 +151,13 @@ namespace TodoTaskApp.Services
         {
             try
             {
+                // Check if user can access this task using TaskAssignmentRepository
+                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(id, userId);
+                if (!canAccess)
+                {
+                    return false;
+                }
+
                 return await _todoTaskRepository.UpdateTaskStatusAsync(id, status, userId);
             }
             catch (Exception ex)
@@ -93,11 +167,36 @@ namespace TodoTaskApp.Services
             }
         }
 
-        public async Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId)
+        // Updated to return TodoTaskWithAssignmentInfo
+        public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> FilterTasksAsync(FilterViewModel filter, int userId)
         {
             try
             {
-                return await _todoTaskRepository.FilterTasksAsync(filter, userId);
+                // For filtering, we need to get all accessible tasks first, then apply filters
+                var allTasks = await _taskAssignmentRepository.GetAllAccessibleTasksAsync(userId);
+
+                // Apply filters in memory (or create new stored procedures for complex filtering with assignments)
+                var filteredTasks = allTasks.AsEnumerable();
+
+                if (!string.IsNullOrEmpty(filter.Priority))
+                {
+                    filteredTasks = filteredTasks.Where(t => t.Priority == filter.Priority);
+                }
+
+                if (!string.IsNullOrEmpty(filter.Status))
+                {
+                    filteredTasks = filteredTasks.Where(t => t.Status == filter.Status);
+                }
+
+                if (!string.IsNullOrEmpty(filter.SearchTerm))
+                {
+                    var searchTerm = filter.SearchTerm.ToLower();
+                    filteredTasks = filteredTasks.Where(t =>
+                        (t.Title?.ToLower().Contains(searchTerm) ?? false) ||
+                        (t.Description?.ToLower().Contains(searchTerm) ?? false));
+                }
+
+                return filteredTasks.OrderByDescending(t => t.CreatedDate);
             }
             catch (Exception ex)
             {
@@ -106,11 +205,27 @@ namespace TodoTaskApp.Services
             }
         }
 
-        public async Task<IEnumerable<TodoTask>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId)
+        // Updated to return TodoTaskWithAssignmentInfo
+        public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId)
         {
             try
             {
-                return await _todoTaskRepository.FilterTasksByDateRangeAsync(filter, userId);
+                // Similar to above - get accessible tasks first, then filter
+                var allTasks = await _taskAssignmentRepository.GetAllAccessibleTasksAsync(userId);
+
+                var filteredTasks = allTasks.AsEnumerable();
+
+                if (filter.StartDate.HasValue)
+                {
+                    filteredTasks = filteredTasks.Where(t => t.DueDate >= filter.StartDate.Value);
+                }
+
+                if (filter.EndDate.HasValue)
+                {
+                    filteredTasks = filteredTasks.Where(t => t.DueDate <= filter.EndDate.Value);
+                }
+
+                return filteredTasks.OrderBy(t => t.DueDate);
             }
             catch (Exception ex)
             {

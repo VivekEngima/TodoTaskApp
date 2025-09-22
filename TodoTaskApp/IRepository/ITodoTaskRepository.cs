@@ -13,5 +13,6 @@ namespace TodoTaskApp.IRepository
         Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId);
         Task<IEnumerable<TodoTask>> FilterTasksByDateRangeAsync(FilterViewModel filter, int userId);
         Task<bool> CheckDuplicateTaskAsync(string title, int? excludeId, int userId);
+
     }
 }
