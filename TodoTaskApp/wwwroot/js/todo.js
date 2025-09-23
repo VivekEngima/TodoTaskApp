@@ -1,5 +1,4 @@
-﻿// FIXED todo.js with full-width quick add spanning all empty columns
-(function () {
+﻿(function () {
     // Scoped variables
     let currentTodoFilter = { 
         status: null, 
