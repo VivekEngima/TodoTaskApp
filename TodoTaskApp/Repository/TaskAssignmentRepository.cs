@@ -92,5 +92,24 @@ namespace TodoTaskApp.Repository
             using var connection = _context.CreateConnection();
             return await connection.QueryAsync<int>(query, new { TaskId = taskId });
         }
+
+        // Get tasks assigned TO a specific user (not created by them)
+        public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> GetTasksAssignedToUserAsync(int userId)
+        {
+            using var connection = _context.CreateConnection();
+            return await connection.QueryAsync<TodoTaskWithAssignmentInfo>(
+                "sp_GetTasksAssignedToUser",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+        }
+
+        // Get task assignment dates for a user (when tasks were assigned to them)
+        public async Task<IEnumerable<DateTime>> GetTaskAssignmentDatesForUserAsync(int userId)
+        {
+            var query = @"SELECT AssignedDate FROM TaskAssignments WHERE AssignedUserId = @UserId";
+
+            using var connection = _context.CreateConnection();
+            return await connection.QueryAsync<DateTime>(query, new { UserId = userId });
+        }
     }
 }

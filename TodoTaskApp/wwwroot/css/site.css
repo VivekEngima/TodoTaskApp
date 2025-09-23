@@ -2,13 +2,16 @@
 
 /* Layout */
 html {
-    position: relative;
-    min-height: 100%;
+    height: 100%;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 body {
-    margin-bottom: 60px;
+    height: 100%;
+    margin: 0;
+    padding: 0;
     background-color: #f8f9fa;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 .footer {
@@ -342,12 +345,20 @@ body {
 }
 
 /* Dashboard page specific container */
+.dashboard-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+}
+
 .dashboard-page .container-fluid {
     max-width: 100% !important;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    height: calc(100vh - 80px); /* Account for header */
-    overflow-y: auto;
+    padding-left: 0;
+    padding-right: 0;
+    flex: 1;
+    overflow: visible; /* Remove forced scrolling */
 }
 
 .dashboard-page .row {
@@ -355,24 +366,15 @@ body {
     margin-right: 0;
 }
 
-/* Custom scrollbar for dashboard only */
-.dashboard-page .container-fluid::-webkit-scrollbar {
-    width: 8px;
+/* Ensure dashboard content is properly centered and full width */
+.dashboard-page {
+    margin-left: -15px;
+    margin-right: -15px;
+    padding-left: 15px;
+    padding-right: 15px;
 }
 
-.dashboard-page .container-fluid::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.dashboard-page .container-fluid::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-}
-
-    .dashboard-page .container-fluid::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
+/* Remove custom scrollbar for dashboard - let browser handle it naturally */
 
 /* Ensure Chart.js tooltips can render properly */
 .chart-container {
@@ -389,3 +391,4 @@ canvas {
 .chartjs-tooltip {
     z-index: 9999 !important;
 }
+

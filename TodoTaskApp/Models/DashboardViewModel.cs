@@ -25,6 +25,11 @@ namespace TodoTaskApp.Models
 
         // Monthly Daily Task Creation (1 month before and after today)
         public List<DailyTaskData> MonthlyTaskCreation { get; set; } = new();
+
+        // Task Lists
+        public List<TodoTaskWithAssignmentInfo> RecentTasks { get; set; } = new();
+        public List<TodoTaskWithAssignmentInfo> AssignedTasks { get; set; } = new();
+        public List<TodoTaskWithAssignmentInfo> UpcomingTasksList { get; set; } = new();
     }
 
     public class DailyTaskData

@@ -6,6 +6,7 @@
 
     // Initialize dashboard when DOM is ready
     $(document).ready(function () {
+        console.log('Document ready, initializing dashboard...');
         initializeDashboard();
         setupAntiForgeryToken();
     });
@@ -37,23 +38,34 @@
 
     // Show dashboard content
     function showDashboard() {
-        $('#loadingSpinner').addClass('d-none');
-        $('#errorMessage').addClass('d-none');
-        $('#dashboardContent').removeClass('d-none');
+        $('#loadingSpinner').addClass('d-none');  // Hide loading spinner
+        $('#errorMessage').addClass('d-none');    // Hide error message
+        $('#dashboardContent').removeClass('d-none'); // Show dashboard content
     }
 
     // Load dashboard statistics via AJAX
     async function loadDashboardStatistics() {
         try {
+            console.log('Loading dashboard statistics...');
             const response = await $.ajax({
                 url: '/Dashboard/GetStatistics',
                 type: 'GET',
                 cache: false
             });
 
+            console.log('Response received:', response);
+
             if (response.success) {
+                console.log('Response successful, calling populateStatistics...');
                 populateStatistics(response.data);
+                
+                console.log('Calling createCharts...');
                 createCharts(response.data);
+                
+                console.log('Calling populateTaskLists...');
+                populateTaskLists(response.data);
+                
+                console.log('Calling showDashboard...');
                 showDashboard();
             } else {
                 console.error('Error from server:', response.message);
@@ -62,6 +74,177 @@
         } catch (error) {
             console.error('AJAX error:', error);
             showError();
+        }
+    }
+
+    // Populate task lists (Recent, Assigned, and Upcoming)
+    function populateTaskLists(data) {
+        console.log('=== POPULATING TASK LISTS ===');
+        console.log('Full data object:', data);
+        console.log('RecentTasks:', data.RecentTasks);
+        console.log('AssignedTasks:', data.AssignedTasks);
+        console.log('UpcomingTasksList:', data.UpcomingTasksList);
+        
+        populateRecentTasks(data.RecentTasks || []);
+        populateAssignedTasks(data.AssignedTasks || []);
+        populateUpcomingTasks(data.UpcomingTasksList || []);
+        
+        // Update task counts in sidebar headers
+        updateTaskCounts(data);
+    }
+
+    // Update task counts in sidebar headers
+    function updateTaskCounts(data) {
+        const recentCount = (data.RecentTasks || []).length;
+        const assignedCount = (data.AssignedTasks || []).length;
+        const upcomingCount = (data.UpcomingTasksList || []).length;
+        
+        console.log('Updating task counts:', { recentCount, assignedCount, upcomingCount });
+        
+        // Count badges removed from sidebar
+        // $('#recentTasksCount').text(recentCount);
+        // $('#assignedTasksCount').text(assignedCount);
+        // $('#upcomingTasksCount').text(upcomingCount);
+    }
+
+    // Populate recent tasks - Show title and due date side by side
+    function populateRecentTasks(tasks) {
+        console.log('=== POPULATING RECENT TASKS ===');
+        console.log('Tasks array:', tasks);
+        console.log('Tasks length:', tasks.length);
+        
+        const container = document.getElementById('recentTasksList');
+        console.log('Container found:', container);
+        
+        if (!container) {
+            console.error('Recent tasks container not found!');
+            return;
+        }
+        
+        if (tasks.length === 0) {
+            console.log('No recent tasks, showing empty message');
+            container.innerHTML = '<div class="text-center text-muted py-3"><small>No recent tasks</small></div>';
+            return;
+        }
+
+        console.log('Rendering recent tasks...');
+        const html = tasks.map(task => {
+            console.log('Processing task:', task);
+            return `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded task-item" data-task-id="${task.Id}">
+                    <div class="fw-medium small">${escapeHtml(task.Title)}</div>
+                    <small class="text-muted">${formatDate(task.DueDate)}</small>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Generated HTML:', html);
+        container.innerHTML = html;
+    }
+
+    // Populate assigned tasks - Show title and who assigned it
+    function populateAssignedTasks(tasks) {
+        console.log('=== POPULATING ASSIGNED TASKS ===');
+        console.log('Tasks array:', tasks);
+        console.log('Tasks length:', tasks.length);
+        
+        const container = document.getElementById('assignedTasksList');
+        console.log('Container found:', container);
+        
+        if (!container) {
+            console.error('Assigned tasks container not found!');
+            return;
+        }
+        
+        if (tasks.length === 0) {
+            console.log('No assigned tasks, showing empty message');
+            container.innerHTML = '<div class="text-center text-muted py-3"><small>No tasks assigned to you</small></div>';
+            return;
+        }
+
+        console.log('Rendering assigned tasks...');
+        const html = tasks.map(task => {
+            console.log('Processing task:', task);
+            return `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded task-item" data-task-id="${task.Id}">
+                    <div class="fw-medium small">${escapeHtml(task.Title)}</div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Generated HTML:', html);
+        container.innerHTML = html;
+    }
+
+    // Populate upcoming tasks - Show title and due date side by side
+    function populateUpcomingTasks(tasks) {
+        console.log('=== POPULATING UPCOMING TASKS ===');
+        console.log('Tasks array:', tasks);
+        console.log('Tasks length:', tasks.length);
+        
+        const container = document.getElementById('upcomingTasksList');
+        console.log('Container found:', container);
+        
+        if (!container) {
+            console.error('Upcoming tasks container not found!');
+            return;
+        }
+        
+        if (tasks.length === 0) {
+            console.log('No upcoming tasks, showing empty message');
+            container.innerHTML = '<div class="text-center text-muted py-3"><small>No upcoming tasks</small></div>';
+            return;
+        }
+
+        console.log('Rendering upcoming tasks...');
+        const html = tasks.map(task => {
+            console.log('Processing task:', task);
+            const creatorInfo = task.CreatedByUsername ? `by ${escapeHtml(task.CreatedByUsername)}` : '';
+            return `
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded task-item" data-task-id="${task.Id}">
+                    <div class="fw-medium small">${escapeHtml(task.Title)}</div>
+                    <div class="text-end">
+                        <small class="text-muted d-block">${formatDate(task.DueDate)}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        console.log('Generated HTML:', html);
+        container.innerHTML = html;
+    }
+
+    // Helper functions
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric',
+            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        });
+    }
+
+    function getPriorityBadgeClass(priority) {
+        switch (priority) {
+            case 'High': return 'bg-danger';
+            case 'Normal': return 'bg-secondary';
+            case 'Low': return 'bg-info';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'Pending': return 'bg-primary';
+            case 'Hold': return 'bg-warning text-dark';
+            case 'Completed': return 'bg-success';
+            default: return 'bg-secondary';
         }
     }
 
@@ -102,10 +285,10 @@
     function createCharts(data) {
         createMonthlyChart(data.MonthlyTaskCreation);
         createPriorityChart(data);
-        createStatusPolarChart(data);
+        createStatusPieChart(data);
     }
 
-    // Create monthly task creation line chart (1 month before and after today)
+    // Create monthly task creation line chart (15 days before and after today)
     function createMonthlyChart(monthlyData) {
         const ctx = document.getElementById('monthlyChart').getContext('2d');
 
@@ -119,7 +302,7 @@
             data: {
                 labels: monthlyData.map(d => d.DateLabel),
                 datasets: [{
-                    label: 'Tasks Created',
+                    label: 'Task Activity',
                     data: monthlyData.map(d => d.TasksCreated),
                     borderColor: '#0d6efd',
                     backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -155,7 +338,7 @@
                                 return context[0].label;
                             },
                             label: function (context) {
-                                return `Tasks Created: ${context.parsed.y}`;
+                                return `Task Activity: ${context.parsed.y}`;
                             }
                         }
                     }
@@ -243,8 +426,8 @@
         });
     }
 
-    // Create status distribution polar area chart
-    function createStatusPolarChart(data) {
+    // Create status distribution pie chart
+    function createStatusPieChart(data) {
         const ctx = document.getElementById('statusChart').getContext('2d');
 
         // Destroy existing chart if exists
@@ -253,7 +436,7 @@
         }
 
         statusChart = new Chart(ctx, {
-            type: 'polarArea',
+            type: 'pie',
             data: {
                 labels: ['Pending', 'Hold', 'Completed'],
                 datasets: [{
@@ -275,21 +458,12 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
-                layout: {
-                    padding: {
-                        top: 20,
-                        bottom: 20,
-                        left: 20,
-                        right: 20
-                    }
-                },
                 plugins: {
                     legend: {
                         display: false
                     },
                     tooltip: {
                         enabled: true,
-                        external: null, // Use default tooltip rendering
                         backgroundColor: 'rgba(0, 0, 0, 0.9)',
                         titleColor: '#ffffff',
                         bodyColor: '#ffffff',
@@ -322,35 +496,6 @@
                                     backgroundColor: context.dataset.backgroundColor[context.dataIndex]
                                 };
                             }
-                        }
-                    }
-                },
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        max: Math.max(data.PendingTasks, data.OnHoldTasks, data.CompletedTasks) + 1,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)',
-                            lineWidth: 1
-                        },
-                        ticks: {
-                            stepSize: 1,
-                            color: '#6c757d',
-                            font: { size: 9 },
-                            display: false,
-                            backdropColor: 'transparent'
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 11,
-                                weight: '500'
-                            },
-                            color: '#495057',
-                            padding: 15
-                        },
-                        angleLines: {
-                            color: 'rgba(0, 0, 0, 0.1)',
-                            lineWidth: 1
                         }
                     }
                 },

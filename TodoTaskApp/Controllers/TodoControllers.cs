@@ -526,7 +526,7 @@ namespace TodoTaskApp.Controllers
 
         // AJAX: Get documents by task ID
         [HttpGet]
-        public async Task<IActionResult> GetTaskDocuments(int taskId)
+        public async Task<IActionResult> GetDocuments(int taskId)
         {
             try
             {
@@ -547,20 +547,54 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Upload document
+        // AJAX: Upload multiple documents
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UploadDocument([FromForm] DocumentUploadViewModel model)
+        public async Task<IActionResult> UploadDocuments([FromForm] int TaskId, [FromForm] List<IFormFile> Files)
         {
             try
             {
-                var documentId = await _documentService.UploadDocumentAsync(model);
-                var documents = await _documentService.GetDocumentsByTaskIdAsync(model.TaskId);
+                if (Files == null || Files.Count == 0)
+                    return Json(new { success = false, message = "Please select files to upload" });
 
+                // Validate TaskId
+                if (TaskId <= 0)
+                {
+                    return Json(new { success = false, message = "Invalid task ID provided" });
+                }
+
+                // Check if adding these files would exceed the 5 document limit
+                var currentCount = await _documentService.GetDocumentCountByTaskAsync(TaskId);
+                if (currentCount + Files.Count > 5)
+                    return Json(new { success = false, message = "Maximum 5 documents allowed per task" });
+
+                var uploadedDocuments = new List<object>();
+                
+                foreach (var file in Files)
+                {
+                    if (file.Length > 0)
+                    {
+                        // Check file size (5MB limit)
+                        const long maxFileSize = 5 * 1024 * 1024;
+                        if (file.Length > maxFileSize)
+                            return Json(new { success = false, message = $"File '{file.FileName}' size cannot exceed 5MB" });
+
+                        var model = new DocumentUploadViewModel
+                        {
+                            TaskId = TaskId,
+                            File = file
+                        };
+
+                        var documentId = await _documentService.UploadDocumentAsync(model);
+                        uploadedDocuments.Add(new { id = documentId, name = file.FileName });
+                    }
+                }
+
+                var documents = await _documentService.GetDocumentsByTaskIdAsync(TaskId);
                 return Json(new
                 {
                     success = true,
-                    message = "Document uploaded successfully",
+                    message = $"{uploadedDocuments.Count} document(s) uploaded successfully",
                     data = documents
                 });
             }
@@ -570,28 +604,26 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error uploading document for task {TaskId}", model.TaskId);
-                return Json(new { success = false, message = "Error uploading document" });
+                _logger.LogError(ex, "Error uploading documents for task {TaskId}", TaskId);
+                return Json(new { success = false, message = "Error uploading documents" });
             }
         }
 
         // AJAX: Delete document
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteDocument(int id, int taskId)
+        public async Task<IActionResult> DeleteDocument([FromForm] int documentId)
         {
             try
             {
-                var success = await _documentService.DeleteDocumentAsync(id);
+                var success = await _documentService.DeleteDocumentAsync(documentId);
 
                 if (success)
                 {
-                    var documents = await _documentService.GetDocumentsByTaskIdAsync(taskId);
                     return Json(new
                     {
                         success = true,
-                        message = "Document deleted successfully",
-                        data = documents
+                        message = "Document deleted successfully"
                     });
                 }
 
@@ -599,18 +631,18 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting document {DocumentId}", id);
+                _logger.LogError(ex, "Error deleting document {DocumentId}", documentId);
                 return Json(new { success = false, message = "Error deleting document" });
             }
         }
 
         // Download document
         [HttpGet]
-        public async Task<IActionResult> DownloadDocument(int id)
+        public async Task<IActionResult> DownloadDocument(int documentId)
         {
             try
             {
-                var document = await _documentService.GetDocumentByIdAsync(id);
+                var document = await _documentService.GetDocumentByIdAsync(documentId);
 
                 if (document == null)
                     return NotFound();
@@ -619,7 +651,7 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error downloading document {DocumentId}", id);
+                _logger.LogError(ex, "Error downloading document {DocumentId}", documentId);
                 return NotFound();
             }
         }

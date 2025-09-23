@@ -14,8 +14,9 @@
                     <div class="card">
                         <div class="card-header">
                             <h6 class="mb-0">
-                                Upload New Documents
+                                <i class="fas fa-upload me-2"></i>Upload New Documents
                             </h6>
+                            <small class="text-muted">Maximum 5 documents per task</small>
                         </div>
                         <div class="card-body">
                             <form id="documentUploadForm" enctype="multipart/form-data">
@@ -24,7 +25,7 @@
                                 <div class="row">
                                     <div class="col-9">
                                         <input type="file" class="form-control" id="documentFile"
-                                               name="File" accept="*/*" multiple required />
+                                               name="Files" accept="*/*" multiple required />
                                     </div>
                                     <div class="col-3">
                                         <button type="submit" class="btn btn-primary w-100" id="uploadBtn">
@@ -42,8 +43,9 @@
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h6 class="mb-0">
-                               </i> Documents
+                                <i class="fas fa-file me-2"></i>Documents
                             </h6>
+                            <span class="badge bg-info" id="documentCountBadge">0/5</span>
                         </div>
                         <div class="card-body p-0">
                             <div id="documentsContainer">
@@ -73,10 +75,9 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="alert">
-                   
-                    <div>Current Document:</div> <span id="currentDocumentName"></span>
-                   
+                <div class="alert alert-info">
+                    <div class="fw-medium">Current Document:</div> 
+                    <span id="currentDocumentName" class="text-primary"></span>
                 </div>
 
                 <form id="replaceDocumentForm" enctype="multipart/form-data">
@@ -99,8 +100,8 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <button type="button" class="btn btn-warning" id="confirmReplaceBtn">
-                   Replace Document
+                <button type="submit" form="replaceDocumentForm" class="btn btn-warning">
+                    <i class="fas fa-exchange-alt"></i> Replace Document
                 </button>
             </div>
         </div>

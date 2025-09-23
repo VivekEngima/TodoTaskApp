@@ -11,5 +11,11 @@ namespace TodoTaskApp.IServices
         Task<bool> CanUserAccessTaskAsync(int taskId, int userId);
         Task<bool> UpdateTaskAssignmentsAsync(int taskId, List<int> assignedUserIds, int currentUserId);
         Task<IEnumerable<int>> GetAssignedUserIdsAsync(int taskId);
+        
+        // Get tasks assigned TO a specific user (not created by them)
+        Task<IEnumerable<TodoTaskWithAssignmentInfo>> GetTasksAssignedToUserAsync(int userId);
+        
+        // Get task assignment dates for a user (when tasks were assigned to them)
+        Task<IEnumerable<DateTime>> GetTaskAssignmentDatesForUserAsync(int userId);
     }
 }

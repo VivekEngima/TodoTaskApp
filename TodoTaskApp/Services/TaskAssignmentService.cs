@@ -126,5 +126,31 @@ namespace TodoTaskApp.Services
                 return Enumerable.Empty<int>();
             }
         }
+
+        public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> GetTasksAssignedToUserAsync(int userId)
+        {
+            try
+            {
+                return await _taskAssignmentRepository.GetTasksAssignedToUserAsync(userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting tasks assigned to user {UserId}", userId);
+                return Enumerable.Empty<TodoTaskWithAssignmentInfo>();
+            }
+        }
+
+        public async Task<IEnumerable<DateTime>> GetTaskAssignmentDatesForUserAsync(int userId)
+        {
+            try
+            {
+                return await _taskAssignmentRepository.GetTaskAssignmentDatesForUserAsync(userId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting task assignment dates for user {UserId}", userId);
+                return Enumerable.Empty<DateTime>();
+            }
+        }
     }
 }
