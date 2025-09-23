@@ -8,6 +8,7 @@ namespace TodoTaskApp.Data
         private readonly IConfiguration _configuration;
         private readonly string _connectionString;
 
+        // Constructor - gets database connection string
         public DapperContext(IConfiguration configuration)
         {
             _configuration = configuration;
@@ -15,6 +16,7 @@ namespace TodoTaskApp.Data
                 throw new ArgumentNullException(nameof(configuration), "Connection string 'DefaultConnection' not found.");
         }
 
+        // Create database connection
         public IDbConnection CreateConnection()
             => new SqlConnection(_connectionString);
     }

@@ -12,13 +12,14 @@ namespace TodoTaskApp.Controllers
         private readonly IUserService _userService;
         private readonly ILogger<AuthController> _logger;
 
+        // Constructor - gets user service for login/signup
         public AuthController(IUserService userService, ILogger<AuthController> logger)
         {
             _userService = userService;
             _logger = logger;
         }
 
-        // GET: Auth/Login
+        // Show login page
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
@@ -26,7 +27,7 @@ namespace TodoTaskApp.Controllers
             return View();
         }
 
-        // POST: Auth/Login
+        // Process login form
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
@@ -48,7 +49,7 @@ namespace TodoTaskApp.Controllers
                     return View(model);
                 }
 
-                // Create authentication claims
+                // Create user session
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.Name, result.User!.Username),
@@ -87,14 +88,14 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // GET: Auth/Signup
+        // Show signup page
         [HttpGet]
         public IActionResult Signup()
         {
             return View();
         }
 
-        // POST: Auth/Signup
+        // Process signup form
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Signup(SignupViewModel model)

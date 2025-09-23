@@ -10,11 +10,13 @@ namespace TodoTaskApp.Repository
     {
         private readonly DapperContext _context;
 
+        // Constructor - gets database connection
         public TodoTaskRepository(DapperContext context)
         {
             _context = context;
         }
 
+        // Check if task title already exists for user
         public async Task<bool> CheckDuplicateTaskAsync(string title, int? excludeId, int userId)
         {
             var query = @"
@@ -33,6 +35,7 @@ namespace TodoTaskApp.Repository
             return count > 0;
         }
 
+        // Create new task using stored procedure
         public async Task<int> CreateTaskAsync(TodoTaskViewModel task, int userId)
         {
             var query = "CreateTodoTask";

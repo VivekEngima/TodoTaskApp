@@ -10,6 +10,7 @@ namespace TodoTaskApp.Services
         private readonly ITaskAssignmentRepository _taskAssignmentRepository;
         private readonly ILogger<TodoTaskService> _logger;
 
+        // Constructor - gets repositories for data access
         public TodoTaskService(
             ITodoTaskRepository todoTaskRepository,
             ITaskAssignmentRepository taskAssignmentRepository,
@@ -20,12 +21,11 @@ namespace TodoTaskApp.Services
             _logger = logger;
         }
 
-        // Updated to return TodoTaskWithAssignmentInfo
+        // Get all tasks user can see (owned + assigned)
         public async Task<IEnumerable<TodoTaskWithAssignmentInfo>> GetAllTasksAsync(int userId)
         {
             try
             {
-                // Use the TaskAssignmentRepository method that gets accessible tasks (owned + assigned)
                 return await _taskAssignmentRepository.GetAllAccessibleTasksAsync(userId);
             }
             catch (Exception ex)
@@ -35,11 +35,12 @@ namespace TodoTaskApp.Services
             }
         }
 
+        // Get single task by ID (check access first)
         public async Task<TodoTask?> GetTaskByIdAsync(int id, int userId)
         {
             try
             {
-                // First check if user can access this task using TaskAssignmentRepository
+                // Check if user can access this task
                 var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(id, userId);
                 if (!canAccess)
                 {
@@ -55,13 +56,14 @@ namespace TodoTaskApp.Services
             }
         }
 
+        // Create new task and assign to users
         public async Task<int> CreateTaskAsync(TodoTaskViewModel task, int userId)
         {
             try
             {
                 var taskId = await _todoTaskRepository.CreateTaskAsync(task, userId);
 
-                // If task was created successfully and has assignments, handle them
+                // Assign task to other users if specified
                 if (taskId > 0 && task.AssignedUserIds.Any())
                 {
                     foreach (var assignedUserId in task.AssignedUserIds)

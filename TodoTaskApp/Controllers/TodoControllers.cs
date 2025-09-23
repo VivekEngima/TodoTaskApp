@@ -14,6 +14,7 @@ namespace TodoTaskApp.Controllers
         private readonly ITaskAssignmentService _taskAssignmentService;
         private readonly ILogger<TodoController> _logger;
 
+        // Constructor - gets services from dependency injection
         public TodoController(
             ITodoTaskService todoTaskService,
             ITodoTaskDocumentService documentService,
@@ -26,6 +27,7 @@ namespace TodoTaskApp.Controllers
             _logger = logger;
         }
 
+        // Main todo page
         public async Task<IActionResult> Index()
         {
             try
@@ -33,7 +35,7 @@ namespace TodoTaskApp.Controllers
                 var userId = User.GetUserId();
                 var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
-                // Map TodoTaskWithAssignmentInfo to TodoTaskViewModel with assignment info
+                // Convert tasks to view models with assignment info
                 var taskViewModels = new List<TodoTaskViewModel>();
 
                 foreach (var t in tasks)
@@ -75,7 +77,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Get all tasks with assignment info
+        // Get all tasks for AJAX calls
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
         {
@@ -162,7 +164,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Create new task with assignments
+        // Create new task
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTask([FromBody] TodoTaskViewModel model)
@@ -195,7 +197,7 @@ namespace TodoTaskApp.Controllers
             }
         }
 
-        // AJAX: Update task with assignments
+        // Update existing task
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UpdateTask([FromBody] TodoTaskViewModel model)

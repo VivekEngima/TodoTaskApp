@@ -12,27 +12,29 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Add Dapper Context
+// Database connection
 builder.Services.AddScoped<DapperContext>();
 
+// Task management services
 builder.Services.AddScoped<ITodoTaskRepository, TodoTaskRepository>();
 builder.Services.AddScoped<ITodoTaskService, TodoTaskService>();
-// Add document repositories and services
+
+// Document handling services
 builder.Services.AddScoped<ITodoTaskDocumentRepository, TodoTaskDocumentRepository>();
 builder.Services.AddScoped<ITodoTaskDocumentService, TodoTaskDocumentService>();
 
-// Add User authentication services
+// User management services
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-// ADD Task Assignment services
+// Task assignment services
 builder.Services.AddScoped<ITaskAssignmentRepository, TaskAssignmentRepository>();
 builder.Services.AddScoped<ITaskAssignmentService, TaskAssignmentService>();
 
-// Add Password Hasher
+// Password security
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
-// Add Cookie Authentication
+// User login system
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -46,10 +48,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;
     });
 
-// Add Authorization
+// User permissions
 builder.Services.AddAuthorization();
 
-// Add JSON options for better serialization
+// JSON formatting
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -59,7 +61,7 @@ builder.Services.AddControllers()
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Error handling for production
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -71,10 +73,11 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+// Check user login
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Configure routes
+// URL routing
 app.MapControllerRoute(
     name: "Auth",
     pattern: "Auth/{action=Login}",
@@ -86,7 +89,7 @@ app.MapControllerRoute(
     defaults: new { controller = "Todo", action = "Index" }
 );
 
-// Default Home Route - redirect unauthenticated users to login
+// Main page
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Dashboard}/{action=Index}");

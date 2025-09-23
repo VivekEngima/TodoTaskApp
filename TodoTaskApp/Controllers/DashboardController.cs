@@ -13,6 +13,7 @@ namespace TodoTaskApp.Controllers
         private readonly ITaskAssignmentService _taskAssignmentService;
         private readonly ILogger<DashboardController> _logger;
 
+        // Constructor - gets services for dashboard data
         public DashboardController(ITodoTaskService todoTaskService, ITaskAssignmentService taskAssignmentService, ILogger<DashboardController> logger)
         {
             _todoTaskService = todoTaskService;
@@ -28,14 +29,14 @@ namespace TodoTaskApp.Controllers
                 var userId = User.GetUserId();
                 var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
-                // Dashboard statistics
+                // Calculate task counts
                 ViewBag.TotalTasks = tasks.Count();
                 ViewBag.CompletedTasks = tasks.Count(t => t.Status == "Completed");
                 ViewBag.PendingTasks = tasks.Count(t => t.Status == "Pending");
                 ViewBag.OverdueTasks = tasks.Count(t => t.DueDate < DateTime.Now && t.Status != "Completed");
                 ViewBag.Username = User.GetUsername();
 
-                // Recent tasks (last 5)
+                // Show recent tasks
                 ViewBag.RecentTasks = tasks.OrderByDescending(t => t.CreatedDate).Take(5);
 
                 return View(tasks);
