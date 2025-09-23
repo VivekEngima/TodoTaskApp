@@ -19,8 +19,11 @@ namespace TodoTaskApp.Services
         {
             try
             {
+                _logger.LogInformation("UserService.LoginAsync called for username: {Username}", loginModel.Username);
+                
                 if (string.IsNullOrWhiteSpace(loginModel.Username) || string.IsNullOrWhiteSpace(loginModel.Password))
                 {
+                    _logger.LogWarning("Login failed - empty username or password");
                     return new AuthResultViewModel
                     {
                         Success = false,
@@ -61,9 +64,12 @@ namespace TodoTaskApp.Services
         {
             try
             {
+                _logger.LogInformation("UserService.SignupAsync called for username: {Username}", signupModel.Username);
+                
                 // Validate input
                 if (string.IsNullOrWhiteSpace(signupModel.Username) || string.IsNullOrWhiteSpace(signupModel.Password))
                 {
+                    _logger.LogWarning("Signup failed - empty username or password");
                     return new AuthResultViewModel
                     {
                         Success = false,

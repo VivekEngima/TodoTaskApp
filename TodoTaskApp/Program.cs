@@ -38,7 +38,7 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.LoginPath = "/Auth/Login";
+        options.LoginPath = "/Auth/Index";
         options.LogoutPath = "/Auth/Logout";
         options.AccessDeniedPath = "/Auth/AccessDenied";
         options.ExpireTimeSpan = TimeSpan.FromHours(24);
@@ -80,7 +80,7 @@ app.UseAuthorization();
 // URL routing
 app.MapControllerRoute(
     name: "Auth",
-    pattern: "Auth/{action=Login}",
+    pattern: "Auth/{action=Index}",
     defaults: new { controller = "Auth" });
 
 app.MapControllerRoute(

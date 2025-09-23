@@ -12,9 +12,6 @@ namespace TodoTaskApp.Models
         [Display(Name = "Password")]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
-
-        [Display(Name = "Remember me")]
-        public bool RememberMe { get; set; }
     }
 
     public class SignupViewModel

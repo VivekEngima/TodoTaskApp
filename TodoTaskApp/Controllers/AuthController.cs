@@ -19,13 +19,15 @@ namespace TodoTaskApp.Controllers
             _logger = logger;
         }
 
-        // Show login page
+        // Show unified auth page (login and signup side by side)
         [HttpGet]
-        public IActionResult Login(string? returnUrl = null)
+        public IActionResult Index(string? returnUrl = null)
         {
             ViewBag.ReturnUrl = returnUrl;
-            return View();
+            var authViewModel = new AuthViewModel();
+            return View(authViewModel);
         }
+
 
         // Process login form
         [HttpPost]
@@ -33,10 +35,17 @@ namespace TodoTaskApp.Controllers
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
             ViewBag.ReturnUrl = returnUrl;
+            
+            _logger.LogInformation("Login attempt for username: {Username}", model.Username);
 
             if (!ModelState.IsValid)
             {
-                return View(model);
+                _logger.LogWarning("Login failed - ModelState invalid. Errors: {Errors}", 
+                    string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+                
+                // Always return to the unified auth page
+                var authViewModel = new AuthViewModel { Login = model };
+                return View("Index", authViewModel);
             }
 
             try
@@ -45,8 +54,27 @@ namespace TodoTaskApp.Controllers
 
                 if (!result.Success)
                 {
-                    ModelState.AddModelError(string.Empty, result.Message);
-                    return View(model);
+                    // Check if user doesn't exist and suggest signup
+                    if (result.Message.Contains("Invalid username or password"))
+                    {
+                        var userExists = await _userService.UsernameExistsAsync(model.Username);
+                        if (!userExists)
+                        {
+                            TempData["InfoMessage"] = $"Username '{model.Username}' does not exist. Please create a new account.";
+                        }
+                        else
+                        {
+                            TempData["ErrorMessage"] = "Invalid password. Please check your password and try again.";
+                        }
+                    }
+                    else
+                    {
+                        TempData["ErrorMessage"] = result.Message;
+                    }
+
+                    // Always return to the unified auth page
+                    var authViewModel = new AuthViewModel { Login = model };
+                    return View("Index", authViewModel);
                 }
 
                 // Create user session
@@ -61,8 +89,8 @@ namespace TodoTaskApp.Controllers
 
                 var authProperties = new AuthenticationProperties
                 {
-                    IsPersistent = model.RememberMe,
-                    ExpiresUtc = model.RememberMe ? DateTimeOffset.UtcNow.AddDays(7) : DateTimeOffset.UtcNow.AddHours(24)
+                    IsPersistent = false,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddHours(24)
                 };
 
                 await HttpContext.SignInAsync(
@@ -83,26 +111,30 @@ namespace TodoTaskApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login process for user {Username}", model.Username);
-                ModelState.AddModelError(string.Empty, "An unexpected error occurred. Please try again.");
-                return View(model);
+                
+                // Always return to the unified auth page
+                TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
+                var authViewModel = new AuthViewModel { Login = model };
+                return View("Index", authViewModel);
             }
         }
 
-        // Show signup page
-        [HttpGet]
-        public IActionResult Signup()
-        {
-            return View();
-        }
 
         // Process signup form
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Signup(SignupViewModel model)
         {
+            _logger.LogInformation("Signup attempt for username: {Username}", model.Username);
+            
             if (!ModelState.IsValid)
             {
-                return View(model);
+                _logger.LogWarning("Signup failed - ModelState invalid. Errors: {Errors}", 
+                    string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
+                
+                // Always return to the unified auth page
+                var authViewModel = new AuthViewModel { Signup = model };
+                return View("Index", authViewModel);
             }
 
             try
@@ -111,8 +143,10 @@ namespace TodoTaskApp.Controllers
 
                 if (!result.Success)
                 {
-                    ModelState.AddModelError(string.Empty, result.Message);
-                    return View(model);
+                    // Always return to the unified auth page
+                    TempData["ErrorMessage"] = result.Message;
+                    var authViewModel = new AuthViewModel { Signup = model };
+                    return View("Index", authViewModel);
                 }
 
                 _logger.LogInformation("New user {Username} registered successfully", result.User!.Username);
@@ -149,8 +183,11 @@ namespace TodoTaskApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during signup process for user {Username}", model.Username);
-                ModelState.AddModelError(string.Empty, "An unexpected error occurred. Please try again.");
-                return View(model);
+                
+                // Always return to the unified auth page
+                TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
+                var authViewModel = new AuthViewModel { Signup = model };
+                return View("Index", authViewModel);
             }
         }
 
@@ -163,12 +200,12 @@ namespace TodoTaskApp.Controllers
             {
                 var username = User.Identity?.Name;
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                return RedirectToAction("Login", "Auth");
+                return RedirectToAction("Index", "Auth");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during logout process");
-                return RedirectToAction("Login", "Auth");
+                return RedirectToAction("Index", "Auth");
             }
         }
 
