@@ -33,7 +33,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting users for assignment");
                 return Enumerable.Empty<UserSelectionViewModel>();
             }
         }
@@ -46,7 +45,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting task assignments for task {TaskId}", taskId);
                 return Enumerable.Empty<TaskAssignmentViewModel>();
             }
         }
@@ -78,7 +76,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error assigning task {TaskId} to users", taskId);
                 return false;
             }
         }
@@ -91,7 +88,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error removing task assignment for task {TaskId} and user {UserId}", taskId, assignedUserId);
                 return false;
             }
         }
@@ -104,7 +100,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking task access for task {TaskId} and user {UserId}", taskId, userId);
                 return false;
             }
         }
@@ -122,7 +117,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting assigned user IDs for task {TaskId}", taskId);
                 return Enumerable.Empty<int>();
             }
         }
@@ -135,7 +129,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting tasks assigned to user {UserId}", userId);
                 return Enumerable.Empty<TodoTaskWithAssignmentInfo>();
             }
         }
@@ -148,7 +141,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting task assignment dates for user {UserId}", userId);
                 return Enumerable.Empty<DateTime>();
             }
         }

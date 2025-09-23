@@ -72,7 +72,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading todo tasks");
                 return View(new List<TodoTaskViewModel>());
             }
         }
@@ -120,7 +119,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving tasks");
                 return Json(new { success = false, message = "Error retrieving tasks" });
             }
         }
@@ -159,7 +157,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving task {TaskId}", id);
                 return Json(new { success = false, message = "Error retrieving task" });
             }
         }
@@ -192,7 +189,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating task");
                 return Json(new { success = false, message = "Error creating task" });
             }
         }
@@ -225,7 +221,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating task {TaskId}", model.Id);
                 return Json(new { success = false, message = "Error updating task" });
             }
         }
@@ -242,7 +237,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting users for assignment");
                 return Json(new { success = false, message = "Error loading users" });
             }
         }
@@ -267,7 +261,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting task assignments for task {TaskId}", taskId);
                 return Json(new { success = false, message = "Error getting assignments" });
             }
         }
@@ -289,7 +282,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting task {TaskId}", id);
                 return Json(new { success = false, message = "Error deleting task" });
             }
         }
@@ -314,7 +306,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating task status {TaskId}", id);
                 return Json(new { success = false, message = "Error updating task status" });
             }
         }
@@ -331,7 +322,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error filtering tasks");
                 return Json(new { success = false, message = "Error filtering tasks" });
             }
         }
@@ -347,7 +337,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting filter options");
                 return Json(new { success = false, message = "Error getting filter options" });
             }
         }
@@ -379,7 +368,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error exporting tasks");
                 return Json(new { success = false, message = "Error exporting tasks" });
             }
         }
@@ -475,7 +463,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error importing tasks");
                 return Json(new { success = false, message = "Error importing file" });
             }
         }
@@ -544,7 +531,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving documents for task {TaskId}", taskId);
                 return Json(new { success = false, message = "Error retrieving documents" });
             }
         }
@@ -606,7 +592,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error uploading documents for task {TaskId}", TaskId);
                 return Json(new { success = false, message = "Error uploading documents" });
             }
         }
@@ -633,7 +618,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting document {DocumentId}", documentId);
                 return Json(new { success = false, message = "Error deleting document" });
             }
         }
@@ -653,7 +637,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error downloading document {DocumentId}", documentId);
                 return NotFound();
             }
         }
@@ -700,7 +683,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error replacing document {DocumentId}", documentId);
                 return Json(new { success = false, message = "Error replacing document" });
             }
         }

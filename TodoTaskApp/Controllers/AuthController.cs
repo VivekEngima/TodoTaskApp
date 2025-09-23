@@ -24,6 +24,12 @@ namespace TodoTaskApp.Controllers
         public IActionResult Index(string? returnUrl = null)
         {
             ViewBag.ReturnUrl = returnUrl;
+            
+            // Clear TempData to prevent persistence on page reload
+            TempData.Remove("SuccessMessage");
+            TempData.Remove("ErrorMessage");
+            TempData.Remove("InfoMessage");
+            
             var authViewModel = new AuthViewModel();
             return View(authViewModel);
         }
@@ -36,12 +42,8 @@ namespace TodoTaskApp.Controllers
         {
             ViewBag.ReturnUrl = returnUrl;
             
-            _logger.LogInformation("Login attempt for username: {Username}", model.Username);
-
             if (!ModelState.IsValid)
             {
-                _logger.LogWarning("Login failed - ModelState invalid. Errors: {Errors}", 
-                    string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
                 
                 // Always return to the unified auth page
                 var authViewModel = new AuthViewModel { Login = model };
@@ -98,7 +100,6 @@ namespace TodoTaskApp.Controllers
                     new ClaimsPrincipal(claimsIdentity),
                     authProperties);
 
-                _logger.LogInformation("User {Username} logged in successfully", result.User.Username);
 
                 // Redirect to return URL or dashboard
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
@@ -110,8 +111,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login process for user {Username}", model.Username);
-                
                 // Always return to the unified auth page
                 TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
                 var authViewModel = new AuthViewModel { Login = model };
@@ -125,12 +124,8 @@ namespace TodoTaskApp.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Signup(SignupViewModel model)
         {
-            _logger.LogInformation("Signup attempt for username: {Username}", model.Username);
-            
             if (!ModelState.IsValid)
             {
-                _logger.LogWarning("Signup failed - ModelState invalid. Errors: {Errors}", 
-                    string.Join(", ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
                 
                 // Always return to the unified auth page
                 var authViewModel = new AuthViewModel { Signup = model };
@@ -149,7 +144,6 @@ namespace TodoTaskApp.Controllers
                     return View("Index", authViewModel);
                 }
 
-                _logger.LogInformation("New user {Username} registered successfully", result.User!.Username);
 
                 // after successful signup
                 var loginModel = new LoginViewModel
@@ -182,8 +176,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during signup process for user {Username}", model.Username);
-                
                 // Always return to the unified auth page
                 TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
                 var authViewModel = new AuthViewModel { Signup = model };
@@ -204,7 +196,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during logout process");
                 return RedirectToAction("Index", "Auth");
             }
         }
@@ -230,7 +221,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking username availability for {Username}", username);
                 return Json(new { available = false, message = "Error checking username" });
             }
         }

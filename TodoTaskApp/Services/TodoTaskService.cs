@@ -14,7 +14,8 @@ namespace TodoTaskApp.Services
         public TodoTaskService(
             ITodoTaskRepository todoTaskRepository,
             ITaskAssignmentRepository taskAssignmentRepository,
-            ILogger<TodoTaskService> logger)
+            ILogger<TodoTaskService> logger
+            )
         {
             _todoTaskRepository = todoTaskRepository;
             _taskAssignmentRepository = taskAssignmentRepository;
@@ -30,7 +31,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting all tasks for user {UserId}", userId);
                 throw;
             }
         }
@@ -51,7 +51,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting task {TaskId} for user {UserId}", id, userId);
                 throw;
             }
         }
@@ -79,7 +78,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error creating task for user {UserId}", userId);
                 throw;
             }
         }
@@ -124,7 +122,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating task {TaskId} for user {UserId}", task.Id, userId);
                 throw;
             }
         }
@@ -144,7 +141,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting task {TaskId} for user {UserId}", id, userId);
                 throw;
             }
         }
@@ -164,7 +160,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating task status {TaskId} for user {UserId}", id, userId);
                 throw;
             }
         }
@@ -202,7 +197,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error filtering tasks for user {UserId}", userId);
                 throw;
             }
         }
@@ -231,7 +225,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error filtering tasks by date range for user {UserId}", userId);
                 throw;
             }
         }
@@ -244,7 +237,6 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error checking duplicate task for user {UserId}", userId);
                 throw;
             }
         }

@@ -43,7 +43,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading dashboard for user {UserId}", User.GetUserId());
                 return View();
             }
         }
@@ -130,7 +129,6 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading dashboard statistics for user {UserId}", User.GetUserId());
                 return Json(new { success = false, message = "Error loading dashboard statistics" });
             }
         }

@@ -39,7 +39,7 @@
             
             @if (TempData["InfoMessage"] != null)
             {
-                <div class="alert alert-info alert-custom">
+                <div class="alert alert-info alert-custom" id="infoMessage">
                     <i class="fas fa-info-circle me-2"></i>
                     @TempData["InfoMessage"]
                 </div>
@@ -85,7 +85,7 @@
                 
                 <!-- Signup Section -->
                 <div class="col-md-6">
-                    <div class="auth-section">
+                    <div class="auth-section" id="signupSection">
                         <div class="section-header">
                             <i class="fas fa-user-plus"></i>
                             <h3>Create Account</h3>
@@ -127,8 +127,9 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script>
         $(document).ready(function() {
+            
             // Username availability check
-            $('#Signup_Username').on('blur', function() {
+            $('input[name="Username"]').on('blur', function() {
                 var username = $(this).val();
                 if (username.length > 0) {
                     $.post('/Auth/CheckUsername', { username: username })
@@ -149,7 +150,7 @@
             });
             
             // Clear status when typing
-            $('#Signup_Username').on('input', function() {
+            $('input[name="Username"]').on('input', function() {
                 if ($(this).val().length === 0) {
                     $('#usernameStatus').empty();
                 }
