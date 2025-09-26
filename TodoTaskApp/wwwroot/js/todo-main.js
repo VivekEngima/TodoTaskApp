@@ -7,8 +7,6 @@
 
     // Initialize when DOM is ready
     $(document).ready(function() {
-        console.log('Initializing Todo App...');
-        
         // Setup anti-forgery token
         window.TodoApp.Utils.setupAntiForgeryToken();
         
@@ -32,8 +30,6 @@
         if (window.TodoApp.Core) {
             window.TodoApp.Core.initialize();
         }
-        
-        console.log('Todo App initialized successfully');
     });
 
 })();

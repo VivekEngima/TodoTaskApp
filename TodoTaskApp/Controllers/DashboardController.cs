@@ -105,7 +105,7 @@ namespace TodoTaskApp.Controllers
                 
                 // Get tasks assigned TO the user (not created by them)
                 var assignedTasks = await _taskAssignmentService.GetTasksAssignedToUserAsync(userId);
-                var assignedTasksList = assignedTasks.Where(t => t.Status != "Completed").OrderByDescending(t => t.CreatedDate).Take(5).ToList();
+                var assignedTasksList = assignedTasks.Where(t => t.Status != "Completed").OrderByDescending(t => t.AssignedDate).Take(5).ToList();
                 
                 var upcomingTasksList = tasks.Where(t => t.DueDate >= DateTime.Today && t.Status != "Completed").OrderBy(t => t.DueDate).Take(5).ToList();
 

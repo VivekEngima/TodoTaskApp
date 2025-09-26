@@ -14,7 +14,7 @@ namespace TodoTaskApp.Models
 
         // Optional task description
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        [RegularExpression(@"^[a-zA-Z0-9\s]*$", ErrorMessage = "Description cannot contain special characters")]
+        [RegularExpression(@"^[a-zA-Z0-9\s.,!?()-]*$", ErrorMessage = "Description cannot contain special characters")]
         public string? Description { get; set; }
 
         // Task priority level
@@ -61,5 +61,9 @@ namespace TodoTaskApp.Models
         public string CreatedByUsername { get; set; } = string.Empty;
         public bool IsAssigned { get; set; } = false;
         public int AssignmentCount { get; set; } = 0;
+        
+        // Assignment details for "Assigned to Me" section
+        public string AssignedByUsername { get; set; } = string.Empty;
+        public DateTime? AssignedDate { get; set; }
     }
 }

@@ -67,27 +67,22 @@
     window.TodoApp.Dashboard.Statistics.loadDashboardStatistics = function() {
         return new Promise((resolve, reject) => {
             try {
-                console.log('Loading dashboard statistics...');
                 $.ajax({
                     url: '/Dashboard/GetStatistics',
                     type: 'GET',
                     cache: false
                 })
                 .done((response) => {
-                    console.log('Response received:', response);
                     if (response.success) {
                         resolve(response.data);
                     } else {
-                        console.error('Error from server:', response.message);
                         reject(new Error(response.message));
                     }
                 })
                 .fail((error) => {
-                    console.error('AJAX error:', error);
                     reject(error);
                 });
             } catch (error) {
-                console.error('Error loading dashboard statistics:', error);
                 reject(error);
             }
         });

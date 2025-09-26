@@ -3,15 +3,19 @@ using System.Diagnostics;
 using System.Text;
 using TodoTaskApp.Extensions;
 using TodoTaskApp.IServices;
+using TodoTaskApp.IRepository;
 using TodoTaskApp.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TodoTaskApp.Controllers
 {
+    [Authorize]
     public class TodoController : Controller
     {
         private readonly ITodoTaskService _todoTaskService;
         private readonly ITodoTaskDocumentService _documentService;
         private readonly ITaskAssignmentService _taskAssignmentService;
+        private readonly ITodoTaskRepository _todoTaskRepository;
         private readonly ILogger<TodoController> _logger;
 
         // Constructor - gets services from dependency injection
@@ -19,11 +23,13 @@ namespace TodoTaskApp.Controllers
             ITodoTaskService todoTaskService,
             ITodoTaskDocumentService documentService,
             ITaskAssignmentService taskAssignmentService,
+            ITodoTaskRepository todoTaskRepository,
             ILogger<TodoController> logger)
         {
             _todoTaskService = todoTaskService;
             _documentService = documentService;
             _taskAssignmentService = taskAssignmentService;
+            _todoTaskRepository = todoTaskRepository;
             _logger = logger;
         }
 
@@ -76,6 +82,22 @@ namespace TodoTaskApp.Controllers
             }
         }
 
+        // Debug endpoint to check current user
+        [HttpGet]
+        public IActionResult GetCurrentUser()
+        {
+            var userId = User.GetUserId();
+            var username = User.GetUsername();
+            var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            
+            return Json(new { 
+                success = true, 
+                userId = userId,
+                username = username,
+                claims = claims
+            });
+        }
+
         // Get all tasks for AJAX calls
         [HttpGet]
         public async Task<IActionResult> GetAllTasks()
@@ -93,7 +115,34 @@ namespace TodoTaskApp.Controllers
                 {
                     var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(t.Id);
                     var isSharedTask = assignedUserIds.Any();
-
+                    
+                    // Allow all users to edit/delete any task
+                    var isOwner = t.UserId == userId;
+                    var canEdit = true;  // All users can edit any task
+                    var canDelete = true;  // All users can delete any task
+                    
+                    // Determine assignment relationship for tag display
+                    var userRole = "Owner"; // Default to owner
+                    var isAssignedToCurrentUser = false;
+                    var isAssignedByCurrentUser = false;
+                    
+                    // Check if current user assigned this task to others
+                    var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(t.Id);
+                    isAssignedByCurrentUser = assignments.Any(a => a.AssignedByUserId == userId);
+                    
+                    // Check if current user can assign this task (only original assigner can reassign)
+                    var canAssignTask = await _taskAssignmentService.CanAssignTaskAsync(t.Id, new List<int>(), userId);
+                    
+                    if (isOwner)
+                    {
+                        userRole = "Owner";
+                    }
+                    else if (t.IsAssigned)
+                    {
+                        userRole = "Assigned";
+                        isAssignedToCurrentUser = true; // Current user is assigned to this task
+                    }
+                    
                     tasksWithInfo.Add(new
                     {
                         t.Id,
@@ -111,7 +160,13 @@ namespace TodoTaskApp.Controllers
                         AssignmentCount = t.AssignmentCount,
                         DocumentCount = documentCounts.ContainsKey(t.Id) ? documentCounts[t.Id] : 0,
                         AssignedUserIds = assignedUserIds.ToList(),
-                        IsSharedTask = isSharedTask
+                        IsSharedTask = isSharedTask,
+                        CanEdit = canEdit,
+                        CanDelete = canDelete,
+                        UserRole = userRole,
+                        IsAssignedToCurrentUser = isAssignedToCurrentUser,
+                        IsAssignedByCurrentUser = isAssignedByCurrentUser,
+                        CanAssignTask = canAssignTask
                     });
                 }
 
@@ -136,6 +191,11 @@ namespace TodoTaskApp.Controllers
 
                 var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(id);
                 var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(id);
+                
+                // Allow all users to edit/delete any task
+                var isOwner = task.UserId == userId;
+                var canEdit = true;  // All users can edit any task
+                var canDelete = true;  // All users can delete any task
 
                 var taskWithAssignments = new
                 {
@@ -150,7 +210,9 @@ namespace TodoTaskApp.Controllers
                     task.CompletedDate,
                     task.UserId,
                     AssignedUserIds = assignedUserIds.ToList(),
-                    Assignments = assignments.ToList()
+                    Assignments = assignments.ToList(),
+                    CanEdit = canEdit,
+                    CanDelete = canDelete
                 };
 
                 return Json(new { success = true, data = taskWithAssignments });
@@ -181,15 +243,17 @@ namespace TodoTaskApp.Controllers
 
                 if (taskId > 0)
                 {
-                    var newTask = await _todoTaskService.GetTaskByIdAsync(taskId, userId);
-                    return Json(new { success = true, data = newTask, message = "Task created successfully" });
+                    // For newly created tasks, we don't need to retrieve the full task details
+                    // Just return success with the task ID - the UI will refresh the list
+                    return Json(new { success = true, data = new { Id = taskId }, message = "Task created successfully" });
                 }
 
                 return Json(new { success = false, message = "Failed to create task" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error creating task" });
+                _logger.LogError(ex, "Error creating task for user {UserId}", User.GetUserId());
+                return Json(new { success = false, message = "Error creating task", error = ex.Message });
             }
         }
 
@@ -221,7 +285,8 @@ namespace TodoTaskApp.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error updating task" });
+                _logger.LogError(ex, "Error updating task {TaskId} for user {UserId}", model.Id, User.GetUserId());
+                return Json(new { success = false, message = "Error updating task", error = ex.Message });
             }
         }
 
@@ -265,6 +330,30 @@ namespace TodoTaskApp.Controllers
             }
         }
 
+        // AJAX: Get task assignment status
+        [HttpGet]
+        public async Task<IActionResult> GetTaskAssignmentStatus(int taskId)
+        {
+            try
+            {
+                var userId = User.GetUserId();
+
+                // Check if user can access this task
+                var canAccess = await _taskAssignmentService.CanUserAccessTaskAsync(taskId, userId);
+                if (!canAccess)
+                {
+                    return Json(new { success = false, message = "Access denied" });
+                }
+
+                var status = await _taskAssignmentService.GetTaskAssignmentStatusAsync(taskId);
+                return Json(new { success = true, data = status });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error getting assignment status" });
+            }
+        }
+
         // AJAX: Delete task (with access check)
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -276,13 +365,16 @@ namespace TodoTaskApp.Controllers
                 var success = await _todoTaskService.DeleteTaskAsync(id, userId);
 
                 if (success)
+                {
                     return Json(new { success = true, message = "Task deleted successfully" });
+                }
 
                 return Json(new { success = false, message = "Failed to delete task" });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error deleting task" });
+                _logger.LogError(ex, "Error deleting task {TaskId} for user {UserId}", id, User.GetUserId());
+                return Json(new { success = false, message = "Error deleting task", error = ex.Message });
             }
         }
 
@@ -679,11 +771,13 @@ namespace TodoTaskApp.Controllers
             }
             catch (ArgumentException ex)
             {
+                _logger.LogError(ex, "Validation error replacing document {DocumentId}", documentId);
                 return Json(new { success = false, message = ex.Message });
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error replacing document" });
+                _logger.LogError(ex, "Error replacing document {DocumentId}", documentId);
+                return Json(new { success = false, message = "Error replacing document", error = ex.Message });
             }
         }
 

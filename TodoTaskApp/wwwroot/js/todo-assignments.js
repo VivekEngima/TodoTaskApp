@@ -4,6 +4,7 @@
 
     // Module variables
     let allUsers = [];
+    let isLoadingAssignments = false;
 
     // Expose to global scope
     window.TodoApp = window.TodoApp || {};
@@ -11,7 +12,9 @@
 
     // Initialize assignments module
     window.TodoApp.Assignments.initialize = function() {
-        loadUsersForAssignment();
+        loadUsersForAssignment().then(() => {
+            populateUserAssignmentList();
+        });
     };
 
     // Load users for assignment
@@ -20,15 +23,15 @@
         $("#assignmentLoading").removeClass("d-none");
         $("#userAssignmentList").html('<i class="fas fa-spinner fa-spin"></i> Loading users...');
 
-        // Get list of users from server
-        $.ajax({
+        // Return a Promise for the AJAX call
+        return $.ajax({
             url: "/Todo/GetUsersForAssignment",
             type: "GET",
             cache: false,
         })
             .done((response) => {
                 allUsers = response.success ? response.data || [] : [];
-                populateUserAssignmentList();
+                // Don't call populateUserAssignmentList here - let the caller handle it
             })
             .fail((xhr, status, error) => {
                 window.TodoApp.Utils.showAlert("Error loading users for assignment", "warning");
@@ -40,9 +43,111 @@
             });
     }
 
-    // Populate user assignment list
-    function populateUserAssignmentList(selectedUserIds = []) {
+    // Populate user assignment list with conditional rendering
+    function populateUserAssignmentList(selectedUserIds = [], assignmentStatus = null, canAssignTask = true) {
         const container = $("#userAssignmentList");
+        
+        // Clear any existing content and restriction elements
+        container.empty();
+        $('.restriction-badge').remove();
+        $('.reassignment-blocked-container').remove();
+        
+        // Clear forms restriction messages (from todo-forms.js)
+        $('#assignmentSection').next('.alert.alert-warning').remove();
+        
+        // Reset assignment section styling
+        $("#assignmentSection").removeClass("assignment-restricted");
+        
+        // Reset assignment section title - only modify the main assignment section label
+        const assignmentSection = $("#assignmentSection");
+        const mainLabel = assignmentSection.find("> label"); // Only direct child label
+        
+        // Properly reset the label text by creating a fresh icon and setting clean text
+        if (mainLabel.length > 0) {
+            mainLabel.html('<i class="bi bi-people me-2 text-primary"></i> Assign to Users');
+        }
+
+        // Check if task assignment is restricted
+        const isRestricted = !canAssignTask;
+
+        if (isRestricted) {
+            // Show "Re-assigning not allowed" message instead of user list
+            showReassignmentNotAllowedMessage(assignmentStatus, selectedUserIds);
+        } else {
+            // Show normal user assignment list
+            showUserAssignmentList(selectedUserIds);
+        }
+    }
+
+    // Show the "Re-assigning not allowed" message
+    function showReassignmentNotAllowedMessage(assignmentStatus, selectedUserIds) {
+        const container = $("#userAssignmentList");
+        
+        // Get assigned user names
+        const assignedUserNames = assignmentStatus.AssignedUserNames || [];
+        const assignedUsersText = assignedUserNames.length > 0 
+            ? assignedUserNames.join(', ') 
+            : 'Unknown users';
+
+        const reassignmentBlockedHtml = `
+            <div class="reassignment-blocked-container">
+                <div class="alert alert-warning mb-3" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-lock fa-2x me-3 text-warning"></i>
+                        <div>
+                            <h6 class="alert-heading mb-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Re-assigning Task Not Allowed
+                            </h6>
+                            <p class="mb-0">This task has already been assigned and cannot be reassigned to different users.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="current-assignment-info">
+                    <h6 class="text-muted mb-2">
+                        <i class="fas fa-users me-1"></i>
+                        Currently Assigned To:
+                    </h6>
+                    <div class="assigned-users-list">
+                        ${assignedUserNames.map(username => `
+                            <div class="assigned-user-item">
+                                <i class="fas fa-user-check me-2 text-success"></i>
+                                <span class="fw-medium">${window.TodoApp.Utils.escapeHtml(username)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="assignment-details mt-3">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            First assigned on: <strong>${new Date(assignmentStatus.FirstAssignmentDate).toLocaleDateString()}</strong>
+                        </small>
+                    </div>
+                </div>
+
+                <div class="assignment-help mt-3">
+                    <div class="card border-info">
+                        <div class="card-body py-2">
+                            <small class="text-info">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>Note:</strong> Once a task is assigned, it maintains its assignment integrity. 
+                                You can still edit other task details, but user assignments cannot be changed.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.html(reassignmentBlockedHtml);
+    }
+
+    // Show normal user assignment list
+    function showUserAssignmentList(selectedUserIds = []) {
+        const container = $("#userAssignmentList");
+        
+        // Clear container first to prevent duplicates
         container.empty();
 
         if (!allUsers.length) {
@@ -109,40 +214,162 @@
     }
 
     // Load task assignments for editing
-    window.TodoApp.Assignments.loadTaskAssignments = function(taskId) {
-        console.log('TodoApp: Loading task assignments for task:', taskId);
+    window.TodoApp.Assignments.loadTaskAssignments = function(taskId, canAssignTask = true) {
+        // Prevent multiple simultaneous calls
+        if (isLoadingAssignments) {
+            return;
+        }
+        
+        isLoadingAssignments = true;
         $("#assignmentLoading").removeClass("d-none");
 
+        // Ensure users are loaded first, then proceed with assignment loading
+        if (!allUsers.length) {
+            loadUsersForAssignment().then(() => {
+                loadTaskAssignmentsInternal(taskId, canAssignTask);
+            });
+        } else {
+            loadTaskAssignmentsInternal(taskId, canAssignTask);
+        }
+    };
+
+    // Internal function to load task assignments (separated for reusability)
+    function loadTaskAssignmentsInternal(taskId, canAssignTask = true) {
+        // First get assignment status to check if task can be reassigned
         $.ajax({
-            url: "/Todo/GetTaskAssignments",
+            url: "/Todo/GetTaskAssignmentStatus",
             type: "GET",
             data: { taskId: taskId },
             cache: false,
         })
-            .done((response) => {
-                if (response.success) {
-                    const assignments = response.data || [];
-                    const assignedUserIds = assignments.map(a => a.AssignedUserId);
+            .done((statusResponse) => {
+                if (statusResponse.success) {
+                    const status = statusResponse.data;
+                    
+                    // Then get detailed assignments
+                    $.ajax({
+                        url: "/Todo/GetTaskAssignments",
+                        type: "GET",
+                        data: { taskId: taskId },
+                        cache: false,
+                    })
+                        .done((response) => {
+                            if (response.success) {
+                                const assignments = response.data || [];
+                                const assignedUserIds = assignments.map(a => a.AssignedUserId);
 
-                    // Populate assignment checkboxes with current assignments
-                    populateUserAssignmentList(assignedUserIds);
+                                // Populate assignment checkboxes with current assignments
+                                populateUserAssignmentList(assignedUserIds, status, canAssignTask);
 
-                    // Show current assignments
-                    displayCurrentAssignments(assignments);
-                } else {
-                    console.error('TodoApp: Failed to load task assignments:', response.message);
+                                // Show current assignments
+                                displayCurrentAssignments(assignments);
+                                
+                                // Show assignment restrictions if task is already assigned
+                                if (!status.CanBeReassigned) {
+                                    showAssignmentRestrictions(status);
+                                }
+                            }
+                        })
+                        .fail(() => {
+                            populateUserAssignmentList([], null, canAssignTask);
+                        })
+                        .always(() => {
+                            $("#assignmentLoading").addClass("d-none");
+                            isLoadingAssignments = false;
+                        });
                 }
             })
             .fail(() => {
-                console.error('TodoApp: Error loading task assignments');
-                populateUserAssignmentList([]);
-            })
-            .always(() => $("#assignmentLoading").addClass("d-none"));
+                // Fallback to original behavior if status check fails
+                $.ajax({
+                    url: "/Todo/GetTaskAssignments",
+                    type: "GET",
+                    data: { taskId: taskId },
+                    cache: false,
+                })
+                    .done((response) => {
+                        if (response.success) {
+                            const assignments = response.data || [];
+                            const assignedUserIds = assignments.map(a => a.AssignedUserId);
+
+                            // Create a mock status object based on assignments
+                            const mockStatus = {
+                                TaskId: taskId,
+                                IsAssigned: assignments.length > 0,
+                                AssignmentCount: assignments.length,
+                                AssignedUserIds: assignedUserIds,
+                                AssignedUserNames: assignments.map(a => a.AssignedUserName),
+                                FirstAssignmentDate: assignments.length > 0 ? assignments[0].AssignedDate : null,
+                                CanBeReassigned: assignments.length === 0
+                            };
+
+                            // Populate assignment checkboxes with current assignments
+                            populateUserAssignmentList(assignedUserIds, mockStatus);
+
+                            // Show current assignments
+                            displayCurrentAssignments(assignments);
+                        }
+                    })
+                    .fail(() => {
+                        populateUserAssignmentList([]);
+                    })
+                    .always(() => {
+                        $("#assignmentLoading").addClass("d-none");
+                        isLoadingAssignments = false;
+                    });
+            });
+    };
+
+    // Show assignment restrictions (updated for conditional rendering)
+    function showAssignmentRestrictions(status) {
+        // Add a visual indicator to the assignment section
+        const assignmentSection = $("#assignmentSection");
+        
+        // Clear any existing restriction elements first
+        $('.restriction-badge').remove();
+        
+        // Removed assignment locked badges - not needed
+        
+        // Add visual styling to indicate restriction
+        assignmentSection.addClass("assignment-restricted");
+        
+        // Update the assignment section title to reflect the restriction
+        // Only modify the main assignment section label, not the user assignment list labels
+        const mainLabel = assignmentSection.find("> label"); // Only direct child label
+        if (mainLabel.length > 0) {
+            mainLabel.html('<i class="bi bi-people me-2 text-primary"></i> Assignment Status');
+        }
+    }
+
+    // Reset assignment section for new tasks
+    window.TodoApp.Assignments.resetAssignmentSection = function() {
+        const assignmentSection = $("#assignmentSection");
+        const label = assignmentSection.find("label");
+        
+        // Remove all restriction elements
+        assignmentSection.removeClass("assignment-restricted");
+        $('.restriction-badge').remove();
+        $('.reassignment-blocked-container').remove();
+        
+        // Clear forms restriction messages (from todo-forms.js)
+        $('#assignmentSection').next('.alert.alert-warning').remove();
+        
+        // Reset title - only modify the main assignment section label
+        const mainLabel = assignmentSection.find("> label"); // Only direct child label
+        if (mainLabel.length > 0) {
+            mainLabel.html('<i class="bi bi-people me-2 text-primary"></i> Assign to Users');
+        }
+        
+        // Show normal user list
+        showUserAssignmentList([]);
     };
 
     // Expose functions for external use
     window.TodoApp.Assignments.loadUsersForAssignment = loadUsersForAssignment;
     window.TodoApp.Assignments.populateUserAssignmentList = populateUserAssignmentList;
     window.TodoApp.Assignments.displayCurrentAssignments = displayCurrentAssignments;
+    window.TodoApp.Assignments.showAssignmentRestrictions = showAssignmentRestrictions;
+    window.TodoApp.Assignments.showReassignmentNotAllowedMessage = showReassignmentNotAllowedMessage;
+    window.TodoApp.Assignments.showUserAssignmentList = showUserAssignmentList;
 
 })();

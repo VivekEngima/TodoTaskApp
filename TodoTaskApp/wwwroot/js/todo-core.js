@@ -8,6 +8,7 @@
     // Module variables
     let todoTasks = [];
     let editingTodoTaskId = 0;
+    let isModalBeingProcessed = false;
 
     // Expose to global scope
     window.TodoApp = window.TodoApp || {};
@@ -26,6 +27,21 @@
      */
     function loadAllTodos() {
         window.TodoApp.Utils.showLoading(true);
+        
+        // First check current user
+        $.ajax({
+            url: "/Todo/GetCurrentUser",
+            type: "GET",
+            cache: false,
+        })
+        .done((userResponse) => {
+            // User info loaded successfully
+        })
+        .fail((xhr, status, error) => {
+            // Failed to get user info
+        });
+        
+        // Then load tasks
         $.ajax({
             url: "/Todo/GetAllTasks",
             type: "GET",
@@ -37,7 +53,7 @@
                     window.TodoApp.Filters.displayFilteredTasks(todoTasks);
                 }
             })
-            .fail(() => {
+            .fail((xhr, status, error) => {
                 window.TodoApp.Utils.showAlert("Error loading tasks", "danger");
                 todoTasks = [];
                 if (window.TodoApp.Filters) {
@@ -110,6 +126,7 @@
         $("#taskModal")
             .off("hidden.bs.modal")
             .on("hidden.bs.modal", function() {
+                isModalBeingProcessed = false; // Reset processing flag
                 if (window.TodoApp.Forms) {
                     window.TodoApp.Forms.resetForm();
                 }
@@ -129,6 +146,30 @@
             .on("click", function() {
                 window.location.href = "/Dashboard";
             });
+
+        // Export button
+        $("#exportBtn")
+            .off("click")
+            .on("click", function() {
+                exportTasks();
+            });
+
+        // Import button
+        $("#importBtn")
+            .off("click")
+            .on("click", function() {
+                $("#importFileInput").click();
+            });
+
+        // Import file input change
+        $("#importFileInput")
+            .off("change")
+            .on("change", function() {
+                const file = this.files[0];
+                if (file) {
+                    importTasks(file);
+                }
+            });
     }
 
     /**
@@ -136,22 +177,44 @@
      * @param {number} id - Task ID
      */
     window.editTodoTask = function(id) {
+        // Prevent multiple simultaneous edit operations
+        if (isModalBeingProcessed) {
+            console.log('Modal is already being processed, ignoring duplicate edit request');
+            return;
+        }
+        
+        isModalBeingProcessed = true;
         editingTodoTaskId = id;
         const task = todoTasks.find((x) => x.Id === id);
+        // Edit task called
         if (task) {
+            // Reset modal state first to prevent duplicate elements
+            if (window.TodoApp.Assignments && window.TodoApp.Assignments.resetAssignmentSection) {
+                window.TodoApp.Assignments.resetAssignmentSection();
+            }
+            
+            // Clear any existing permission styling first
+            if (window.TodoApp.Forms && window.TodoApp.Forms.clearPermissionStyling) {
+                window.TodoApp.Forms.clearPermissionStyling();
+            }
+            
+            // Populate form with task data (this will apply permission restrictions)
             if (window.TodoApp.Forms) {
                 window.TodoApp.Forms.populateForm(task);
             }
-            $("#taskModalLabel").html('<i class="fas fa-edit"></i> Edit Task');
-            $("#saveTaskBtn").html('<i class="fas fa-save"></i> Update Task');
 
             // Load assignment info
             if (window.TodoApp.Assignments) {
-                window.TodoApp.Assignments.loadTaskAssignments(id);
+                window.TodoApp.Assignments.loadTaskAssignments(id, task.CanAssignTask);
             }
 
             $("#taskModal").modal("show");
         }
+        
+        // Reset the flag after a short delay to allow modal to fully load
+        setTimeout(() => {
+            isModalBeingProcessed = false;
+        }, 500);
     };
 
     /**
@@ -271,8 +334,12 @@
             contentType: "application/json",
             data: JSON.stringify(task),
         })
-            .done((res) => callback(res.success))
-            .fail(() => callback(false));
+            .done((res) => {
+                callback(res.success);
+            })
+            .fail((xhr, status, error) => {
+                callback(false);
+            });
     }
 
     /**
@@ -298,7 +365,9 @@
                     window.TodoApp.Utils.showAlert(res.message, "danger");
                 }
             })
-            .fail(() => window.TodoApp.Utils.showAlert("Error deleting task", "danger"));
+            .fail((xhr, status, error) => {
+                window.TodoApp.Utils.showAlert("Error deleting task", "danger");
+            });
     };
 
     /**
@@ -340,5 +409,62 @@
 
     // Expose functions to global scope for backward compatibility
     window.TodoApp.Core.loadAllTodos = loadAllTodos;
+
+    /**
+     * Export tasks to CSV
+     */
+    function exportTasks() {
+        window.location.href = '/Todo/ExportTasks';
+    }
+
+    /**
+     * Import tasks from CSV file
+     * @param {File} file - CSV file to import
+     */
+    function importTasks(file) {
+        if (!file) {
+            window.TodoApp.Utils.showAlert('Please select a file to import', 'warning');
+            return;
+        }
+
+        if (!file.name.toLowerCase().endsWith('.csv')) {
+            window.TodoApp.Utils.showAlert('Only CSV files are supported', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Show loading state
+        const importBtn = $("#importBtn");
+        const originalHtml = importBtn.html();
+        importBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+
+        $.ajax({
+            url: '/Todo/ImportTasks',
+            type: 'POST',
+            headers: {
+                RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val(),
+            },
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    window.TodoApp.Utils.showAlert('Tasks imported successfully!', 'success');
+                    loadAllTodos(); // Refresh the task list
+                } else {
+                    window.TodoApp.Utils.showAlert(response.message || 'Error importing tasks', 'danger');
+                }
+            },
+            error: function(xhr, status, error) {
+                window.TodoApp.Utils.showAlert('Error importing tasks: ' + error, 'danger');
+            },
+            complete: function() {
+                importBtn.prop('disabled', false).html(originalHtml);
+                $("#importFileInput").val(''); // Clear file input
+            }
+        });
+    }
 
 })();

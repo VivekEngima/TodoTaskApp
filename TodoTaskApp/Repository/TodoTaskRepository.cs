@@ -9,11 +9,12 @@ namespace TodoTaskApp.Repository
     public class TodoTaskRepository : ITodoTaskRepository
     {
         private readonly DapperContext _context;
+        private readonly ILogger<TodoTaskRepository> _logger;
 
-        // Constructor - gets database connection
-        public TodoTaskRepository(DapperContext context)
+        public TodoTaskRepository(DapperContext context, ILogger<TodoTaskRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // Check if task title already exists for user
@@ -63,13 +64,13 @@ namespace TodoTaskApp.Repository
             var query = "DeleteTodoTask";
 
             using var connection = _context.CreateConnection();
-            var affectedRows = await connection.ExecuteAsync(
+            var result = await connection.QuerySingleAsync<int>(
                 query,
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure
             );
 
-            return affectedRows > 0;
+            return result > 0;
         }
 
         public async Task<IEnumerable<TodoTask>> FilterTasksAsync(FilterViewModel filter, int userId)
@@ -149,13 +150,13 @@ namespace TodoTaskApp.Repository
 
             return task;
         }
-
+        
         public async Task<bool> UpdateTaskAsync(TodoTaskViewModel task, int userId)
         {
             var query = "UpdateTodoTask";
 
             using var connection = _context.CreateConnection();
-            var affectedRows = await connection.ExecuteAsync(
+            var result = await connection.QuerySingleAsync<int>(
                 query,
                 new
                 {
@@ -170,21 +171,21 @@ namespace TodoTaskApp.Repository
                 commandType: CommandType.StoredProcedure
             );
 
-            return affectedRows > 0;
+            return result > 0;
         }
-
+       
         public async Task<bool> UpdateTaskStatusAsync(int id, string status, int userId)
         {
             var query = "UpdateTodoTaskStatus";
 
             using var connection = _context.CreateConnection();
-            var affectedRows = await connection.ExecuteAsync(
+            var result = await connection.QuerySingleAsync<int>(
                 query,
                 new { Id = id, Status = status, UserId = userId },
                 commandType: CommandType.StoredProcedure
             );
 
-            return affectedRows > 0;
+            return result > 0;
         }
     }
 }

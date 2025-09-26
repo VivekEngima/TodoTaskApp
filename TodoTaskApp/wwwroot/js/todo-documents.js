@@ -18,8 +18,6 @@
 
     // Open document modal for a specific task
     window.openDocumentModal = function(taskId) {
-        console.log('Opening document modal for task ID:', taskId);
-        
         // Check if task ID is valid
         if (!taskId || taskId <= 0) {
             window.TodoApp.Utils.showAlert('Invalid task ID. Please try again.', 'danger');
@@ -28,7 +26,6 @@
         
         // Remember which task we're working with
         currentDocumentTaskId = parseInt(taskId);
-        console.log('Set currentDocumentTaskId to:', currentDocumentTaskId);
         $('#docTaskId').val(taskId);
         
         // Store the task ID as backup
@@ -159,7 +156,6 @@
         // Document upload form
         $('#documentUploadForm').on('submit', function(e) {
             e.preventDefault();
-            console.log('Form submitted, currentDocumentTaskId:', currentDocumentTaskId);
             uploadDocuments();
         });
 
@@ -171,7 +167,6 @@
 
         // Document modal close
         $('#documentModal').on('hidden.bs.modal', function() {
-            console.log('Document modal closed, resetting currentDocumentTaskId');
             $('#documentFile').val('');
             $('#documentsContainer').html('');
             currentDocumentTaskId = 0; // Reset the current document task ID
@@ -186,8 +181,6 @@
 
     // Upload documents
     function uploadDocuments() {
-        console.log('uploadDocuments called, currentDocumentTaskId:', currentDocumentTaskId);
-        
         const fileInput = $('#documentFile')[0];
         const files = fileInput.files;
         
@@ -201,14 +194,9 @@
         if (!taskIdToUse || taskIdToUse <= 0) {
             // Try to get from modal data attribute as backup
             taskIdToUse = $('#documentModal').data('taskId');
-            console.log('Using backup task ID from modal data:', taskIdToUse);
         }
         
         if (!taskIdToUse || taskIdToUse <= 0) {
-            console.error('Invalid currentDocumentTaskId:', currentDocumentTaskId);
-            console.error('Backup task ID:', $('#documentModal').data('taskId'));
-            console.error('File input:', fileInput);
-            console.error('Files:', files);
             window.TodoApp.Utils.showAlert('Invalid task ID. Please close the modal and try again.', 'danger');
             return;
         }
@@ -234,7 +222,6 @@
 
         // Store the task ID in a local variable to prevent it from being reset
         const taskIdForUpload = taskIdToUse;
-        console.log('Starting upload for task ID:', taskIdForUpload);
         
         $.ajax({
             url: '/Todo/UploadDocuments',
@@ -246,7 +233,6 @@
             processData: false,
             contentType: false,
             success: function(response) {
-                console.log('Upload response:', response);
                 if (response.success) {
                     window.TodoApp.Utils.showAlert('Documents uploaded successfully', 'success');
                     // Use the stored task ID instead of currentDocumentTaskId
@@ -261,7 +247,6 @@
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Upload error:', xhr, status, error);
                 window.TodoApp.Utils.showAlert('Error uploading documents: ' + error, 'danger');
             },
             complete: function() {

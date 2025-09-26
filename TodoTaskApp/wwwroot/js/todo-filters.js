@@ -72,8 +72,8 @@
                 const wasActive = $(this).hasClass("active");
 
                 if (filterValue === 'calendar') {
-                    // Show date range picker
-                    showSimpleDateRangePrompt();
+                    // Toggle date range picker inline
+                    toggleDateRangePicker();
                 } else {
                     // Handle upcoming and today filters normally
                     $(".filter-btn").removeClass("active");
@@ -83,12 +83,37 @@
                     displayFilteredTasks();
                 }
             });
+
+        // Apply date range button
+        $("#applyDateRange")
+            .off("click")
+            .on("click", function() {
+                applyDateRangeFilter();
+            });
+
+        // Clear date range button
+        $("#clearDateRange")
+            .off("click")
+            .on("click", function() {
+                clearDateRangeFilter();
+            });
+
+        // Enter key support for date inputs
+        $("#startDate, #endDate")
+            .off("keypress")
+            .on("keypress", function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    applyDateRangeFilter();
+                }
+            });
     }
 
     // Display filtered tasks
     function displayFilteredTasks(tasks = null) {
-        const allTasks = tasks || (window.TodoApp.Core ? window.TodoApp.Core.getTasks() : []);
-        let list = allTasks.slice();
+        try {
+            const allTasks = tasks || (window.TodoApp.Core ? window.TodoApp.Core.getTasks() : []);
+            let list = allTasks.slice();
 
         // Text search
         if (currentTodoFilter.searchTerm) {
@@ -157,26 +182,42 @@
         }
 
         renderTaskTable(list);
+        } catch (error) {
+            window.TodoApp.Utils.showAlert('Error displaying tasks', 'danger');
+        }
     }
 
     // Render task table
     function renderTaskTable(tasks) {
-        const tbody = $("#tasksBody").empty();
-        tbody.append(createQuickAddRow());
+        try {
+            const tbody = $("#tasksBody").empty();
+            tbody.append(createQuickAddRow());
 
-        if (!tasks.length) {
-            tbody.append(`
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-4">
-                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                        No tasks found. Create your first task above!
-                    </td>
-                </tr>
-            `);
-        } else {
-            tasks.forEach((t) => tbody.append(createTodoTaskRow(t)));
+            if (!tasks.length) {
+                tbody.append(`
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                            No tasks found. Create your first task above!
+                        </td>
+                    </tr>
+                `);
+            } else {
+                tasks.forEach((t) => {
+                    try {
+                        const rowHtml = createTodoTaskRow(t);
+                        if (rowHtml) {
+                            tbody.append(rowHtml);
+                        }
+                    } catch (error) {
+                        // Skip invalid task rows silently
+                    }
+                });
+            }
+            updateTodoTaskCount(tasks.length);
+        } catch (error) {
+            window.TodoApp.Utils.showAlert('Error rendering task table', 'danger');
         }
-        updateTodoTaskCount(tasks.length);
     }
 
     // Create quick add row
@@ -202,27 +243,39 @@
 
     // Create single task row HTML
     function createTodoTaskRow(task) {
-        const isCompleted = task.Status === "Completed";
+        // Defensive programming - ensure all properties exist
+        if (!task || !task.Id) {
+            return '';
+        }
+
+        const isCompleted = (task.Status || '') === "Completed";
         const txtClass = isCompleted ? "text-decoration-line-through text-muted" : "";
 
         // Document count display - make it clickable
         const docCount = task.DocumentCount || 0;
         const docIcon = docCount > 0
-            ? `<span class="badge bg-info" style="cursor: pointer;" onclick="openDocumentModal(${task.Id})" title="Click to manage documents"><i class="fas fa-file"></i> ${docCount}</span>`
-            : `<span class="text-muted" style="cursor: pointer;" onclick="openDocumentModal(${task.Id})" title="Click to manage documents"><i class="fas fa-file"></i> 0</span>`;
+            ? `<span class="badge bg-info" style="cursor: pointer;" onclick="openDocumentModal(${task.Id})" title="Click to ${task.CanEdit ? 'manage' : 'view'} documents"><i class="fas fa-file"></i> ${docCount}</span>`
+            : `<span class="text-muted" style="cursor: pointer;" onclick="openDocumentModal(${task.Id})" title="Click to ${task.CanEdit ? 'manage' : 'view'} documents"><i class="fas fa-file"></i> 0</span>`;
 
-        // Assignment badge - show "Shared" if task is shared with others
+        // Assignment badge - show only two types of tags
         let assignmentBadge = "";
-        if (task.IsSharedTask) {
+        if (task.IsAssignedToCurrentUser) {
+            // Task is assigned to current user by someone else
+            assignmentBadge = `<span class="badge bg-info text-white ms-1">Received</span>`;
+        } else if (task.IsAssignedByCurrentUser) {
+            // Current user assigned this task to others
             assignmentBadge = `<span class="badge bg-warning text-dark ms-1">Shared</span>`;
         }
 
         // Owner indicator - show if current user is assigned to someone else's task
         let ownerIndicator = "";
-        if (task.IsAssigned) {
+        if (task.IsAssignedToCurrentUser && task.CreatedByUsername) {
             ownerIndicator = `<br><small class="text-muted"> 
-                Assign by ${window.TodoApp.Utils.escapeHtml(task.CreatedByUsername)}</small>`;
+                Assigned by ${window.TodoApp.Utils.escapeHtml(task.CreatedByUsername || '')}</small>`;
         }
+
+        // No additional role indicators needed
+        let roleIndicator = "";
 
         return `
             <tr class="task-row" data-task-id="${task.Id}">
@@ -236,6 +289,7 @@
                     ${assignmentBadge}
                     <strong class="${txtClass}">${window.TodoApp.Utils.escapeHtml(task.Title)}</strong>
                     ${ownerIndicator}
+                    ${roleIndicator}
                     ${task.Description ? `<br><small class="text-muted ${txtClass}">${window.TodoApp.Utils.escapeHtml(task.Description)}</small>` : ""}
                 </td>
                 <td class="text-center align-middle">
@@ -266,27 +320,45 @@
         `;
     }
 
-    // Show simple date range prompt
-    function showSimpleDateRangePrompt() {
-        const today = new Date();
-        const todayString = today.toISOString().split("T")[0];
+    // Toggle date range picker inline
+    function toggleDateRangePicker() {
+        const isVisible = !$("#dateRangePicker").hasClass("d-none");
         
-        // Ask for start date
-        const startDate = prompt("Enter start date (YYYY-MM-DD):", todayString);
-        if (startDate === null) return; // User cancelled
-        
-        // Ask for end date
-        const endDate = prompt("Enter end date (YYYY-MM-DD):", todayString);
-        if (endDate === null) return; // User cancelled
+        if (isVisible) {
+            // Hide the picker
+            $("#dateRangePicker").addClass("d-none");
+            $(".filter-btn[data-filter='calendar']").removeClass("active");
+        } else {
+            // Show the picker
+            const today = new Date();
+            const todayString = today.toISOString().split("T")[0];
+            
+            // Set default dates
+            $("#startDate").val(todayString);
+            $("#endDate").val(todayString);
+            
+            // Show the date picker
+            $("#dateRangePicker").removeClass("d-none");
+            $(".filter-btn[data-filter='calendar']").addClass("active");
+            
+            // Focus on start date
+            $("#startDate").focus();
+        }
+    }
+
+    // Apply date range filter
+    function applyDateRangeFilter() {
+        const startDate = $("#startDate").val();
+        const endDate = $("#endDate").val();
         
         // Validate dates
         if (!startDate || !endDate) {
-            alert("Please enter both start and end dates");
+            window.TodoApp.Utils.showAlert("Please select both start and end dates", "warning");
             return;
         }
         
         if (new Date(startDate) > new Date(endDate)) {
-            alert("Start date cannot be after end date");
+            window.TodoApp.Utils.showAlert("Start date cannot be after end date", "warning");
             return;
         }
         
@@ -294,12 +366,33 @@
         $(".filter-btn").removeClass("active");
         currentTodoFilter.dateFilter = null;
         
-        // Set date range filter (always include completed tasks)
+        // Set date range filter
         currentTodoFilter.dateRange = {
             startDate: startDate,
             endDate: endDate,
             includeCompleted: true
         };
+
+        // Keep the calendar button active and hide the picker
+        $(".filter-btn[data-filter='calendar']").addClass("active");
+        $("#dateRangePicker").addClass("d-none");
+
+        // Apply filter
+        displayFilteredTasks();
+    }
+
+    // Clear date range filter
+    function clearDateRangeFilter() {
+        // Clear date range
+        currentTodoFilter.dateRange = { startDate: null, endDate: null, includeCompleted: false };
+        
+        // Hide the date picker and deactivate calendar button
+        $("#dateRangePicker").addClass("d-none");
+        $(".filter-btn[data-filter='calendar']").removeClass("active");
+        
+        // Clear date inputs
+        $("#startDate").val("");
+        $("#endDate").val("");
 
         // Apply filter
         displayFilteredTasks();
@@ -316,6 +409,8 @@
         };
         $(".status-btn, .priority-btn, .filter-btn").removeClass("active");
         $("#searchInput").val("");
+        $("#dateRangePicker").addClass("d-none");
+        $("#startDate, #endDate").val("");
     };
 
     // Update task count display

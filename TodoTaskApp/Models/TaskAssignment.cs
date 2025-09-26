@@ -54,4 +54,16 @@ namespace TodoTaskApp.Models
         public string Username { get; set; } = string.Empty;
         public bool IsSelected { get; set; } = false;
     }
+
+    // Model for task assignment status
+    public class TaskAssignmentStatus
+    {
+        public int TaskId { get; set; }
+        public bool IsAssigned { get; set; }
+        public int AssignmentCount { get; set; }
+        public List<int> AssignedUserIds { get; set; } = new List<int>();
+        public List<string> AssignedUserNames { get; set; } = new List<string>();
+        public DateTime? FirstAssignmentDate { get; set; }
+        public bool CanBeReassigned { get; set; } = true;
+    }
 }

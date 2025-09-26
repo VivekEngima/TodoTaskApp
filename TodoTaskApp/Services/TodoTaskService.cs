@@ -8,17 +8,20 @@ namespace TodoTaskApp.Services
     {
         private readonly ITodoTaskRepository _todoTaskRepository;
         private readonly ITaskAssignmentRepository _taskAssignmentRepository;
+        private readonly ITaskAssignmentService _taskAssignmentService;
         private readonly ILogger<TodoTaskService> _logger;
 
         // Constructor - gets repositories for data access
         public TodoTaskService(
             ITodoTaskRepository todoTaskRepository,
             ITaskAssignmentRepository taskAssignmentRepository,
+            ITaskAssignmentService taskAssignmentService,
             ILogger<TodoTaskService> logger
             )
         {
             _todoTaskRepository = todoTaskRepository;
             _taskAssignmentRepository = taskAssignmentRepository;
+            _taskAssignmentService = taskAssignmentService;
             _logger = logger;
         }
 
@@ -78,6 +81,7 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating task for user {UserId}", userId);
                 throw;
             }
         }
@@ -86,9 +90,9 @@ namespace TodoTaskApp.Services
         {
             try
             {
-                // Check if user can access this task using TaskAssignmentRepository
-                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(task.Id, userId);
-                if (!canAccess)
+                // Check if user can EDIT this task (only owners can edit)
+                var canEdit = await _taskAssignmentRepository.CanUserEditTaskAsync(task.Id, userId);
+                if (!canEdit)
                 {
                     return false;
                 }
@@ -98,23 +102,36 @@ namespace TodoTaskApp.Services
                 // Handle assignment updates if task update was successful
                 if (success)
                 {
-                    // Update assignments - get current assignments first
-                    var currentAssignedUserIds = await _taskAssignmentRepository.GetAssignedUserIdsAsync(task.Id);
-                    var currentSet = new HashSet<int>(currentAssignedUserIds);
-                    var newSet = new HashSet<int>(task.AssignedUserIds.Where(id => id != userId)); // Exclude task owner
-
-                    // Remove users that are no longer assigned
-                    var usersToRemove = currentSet.Except(newSet);
-                    foreach (var assignedUserId in usersToRemove)
+                    // Check if user can assign/reassign tasks (only owners can do this)
+                    var canAssign = await _taskAssignmentRepository.CanUserAssignTaskAsync(task.Id, userId);
+                    if (canAssign)
                     {
-                        await _taskAssignmentRepository.RemoveTaskAssignmentAsync(task.Id, assignedUserId);
-                    }
+                        // Validate if task can be reassigned
+                        var canReassign = await _taskAssignmentService.CanAssignTaskAsync(task.Id, task.AssignedUserIds, userId);
+                        if (!canReassign)
+                        {
+                            _logger.LogWarning("Attempt to reassign already assigned task {TaskId} by user {UserId}", task.Id, userId);
+                            return false; // Prevent reassignment
+                        }
 
-                    // Add new assignments
-                    var usersToAdd = newSet.Except(currentSet);
-                    foreach (var assignedUserId in usersToAdd)
-                    {
-                        await _taskAssignmentRepository.AssignTaskToUserAsync(task.Id, assignedUserId, userId);
+                        // Update assignments - get current assignments first
+                        var currentAssignedUserIds = await _taskAssignmentRepository.GetAssignedUserIdsAsync(task.Id);
+                        var currentSet = new HashSet<int>(currentAssignedUserIds);
+                        var newSet = new HashSet<int>(task.AssignedUserIds.Where(id => id != userId)); // Exclude task owner
+
+                        // Remove users that are no longer assigned
+                        var usersToRemove = currentSet.Except(newSet);
+                        foreach (var assignedUserId in usersToRemove)
+                        {
+                            await _taskAssignmentRepository.RemoveTaskAssignmentAsync(task.Id, assignedUserId);
+                        }
+
+                        // Add new assignments
+                        var usersToAdd = newSet.Except(currentSet);
+                        foreach (var assignedUserId in usersToAdd)
+                        {
+                            await _taskAssignmentRepository.AssignTaskToUserAsync(task.Id, assignedUserId, userId);
+                        }
                     }
                 }
 
@@ -122,6 +139,7 @@ namespace TodoTaskApp.Services
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error updating task {TaskId} for user {UserId}", task.Id, userId);
                 throw;
             }
         }
@@ -130,17 +148,20 @@ namespace TodoTaskApp.Services
         {
             try
             {
-                // Check if user can access this task using TaskAssignmentRepository
-                var canAccess = await _taskAssignmentRepository.CanUserAccessTaskAsync(id, userId);
-                if (!canAccess)
+                // Check if user can DELETE this task (only owners can delete)
+                var canDelete = await _taskAssignmentRepository.CanUserEditTaskAsync(id, userId);
+                
+                if (!canDelete)
                 {
                     return false;
                 }
 
-                return await _todoTaskRepository.DeleteTaskAsync(id, userId);
+                var result = await _todoTaskRepository.DeleteTaskAsync(id, userId);
+                return result;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error deleting task {TaskId} for user {UserId}", id, userId);
                 throw;
             }
         }

@@ -66,12 +66,23 @@ namespace TodoTaskApp.Repository
             if (user == null)
                 return null;
 
-            // Verify the password against the hash
-            var result = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
-
-            if (result == PasswordVerificationResult.Success)
+            // Check if password is already hashed (starts with AQAAAAEAACcQAAAAE)
+            if (user.Password.StartsWith("AQAAAAEAACcQAAAAE"))
             {
-                return user;
+                // Verify the password against the hash
+                var result = _passwordHasher.VerifyHashedPassword(user, user.Password, password);
+                if (result == PasswordVerificationResult.Success)
+                {
+                    return user;
+                }
+            }
+            else
+            {
+                // For plain text passwords (temporary fix for existing data)
+                if (user.Password == password)
+                {
+                    return user;
+                }
             }
 
             return null;

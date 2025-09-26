@@ -12,7 +12,7 @@ namespace TodoTaskApp.Models
         public string Title { get; set; } = string.Empty;
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        [RegularExpression(@"^[a-zA-Z0-9\s]*$", ErrorMessage = "Description cannot contain special characters")]
+        [RegularExpression(@"^[a-zA-Z0-9\s.,!?()-]*$", ErrorMessage = "Description cannot contain special characters")]
         public string? Description { get; set; }
 
         [Required]

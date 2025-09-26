@@ -3,6 +3,8 @@
     ViewData["Title"] = "Todo Tasks ✍";
 }
 
+@Html.AntiForgeryToken()
+
 <div class="row">
     <!-- Left Sidebar - Filters -->
     <div class="col-md-2">
@@ -29,6 +31,31 @@
                             <button type="button" class="btn btn-outline-secondary btn-sm filter-btn" data-filter="calendar">
                                 <i class="fas fa-calendar me-1"></i>Calendar
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Inline Date Range Picker (Hidden by default) -->
+                    <div id="dateRangePicker" class="d-none">
+                        <div class="mb-3">
+                            <label class="form-label">Date Range</label>
+                            <div class="d-grid gap-1">
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="startDate" placeholder="Start Date">
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="date" class="form-control form-control-sm" id="endDate" placeholder="End Date">
+                                    </div>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-primary btn-sm" id="applyDateRange">
+                                        <i class="fas fa-check me-1"></i>Apply
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" id="clearDateRange">
+                                        <i class="fas fa-times me-1"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -142,7 +169,3 @@
         <span class="visually-hidden">Loading...</span>
     </div>
 </div>
-
-@section Scripts {
-    <script src="~/js/todo.js"></script>
-}

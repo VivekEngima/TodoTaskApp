@@ -639,3 +639,42 @@ body.auth-page {
     border-color: #198754;
     box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
 }
+
+/* Assignment tag styling - only two types */
+.assignment-tag {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-left: 0.25rem;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* "Received" tag - Blue (task assigned to you) */
+.badge.bg-info.text-white {
+    background-color: #0dcaf0 !important;
+    color: #000 !important;
+    border: 1px solid #0dcaf0;
+}
+
+/* "Shared" tag - Yellow (you assigned to others) */
+.badge.bg-warning.text-dark {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+    border: 1px solid #ffc107;
+}
+
+/* Assignment tag hover effects */
+.assignment-tag:hover {
+    opacity: 0.8;
+    cursor: help;
+}
+
+/* Task title with assignment badge alignment */
+.task-title-with-badge {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
