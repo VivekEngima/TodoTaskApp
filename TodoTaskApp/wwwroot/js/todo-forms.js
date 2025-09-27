@@ -36,7 +36,20 @@
 
     // Apply role-based restrictions to the modal
     function applyRoleBasedRestrictions(task) {
-        // All users can edit any task - no restrictions
+        // Check if user is assigned to this task (read-only mode)
+        // Only apply read-only mode for "Assigned" role (received tasks), not "Shared" role
+        if (task.UserRole === "Assigned") {
+            showAssignedUserFeatures();
+            return;
+        }
+        
+        // Secondary condition: User is assigned but cannot edit (fallback)
+        if (task.IsAssignedToCurrentUser && !task.CanEdit && task.UserRole !== "Shared") {
+            showAssignedUserFeatures();
+            return;
+        }
+        
+        // User can edit this task
         $('.task-field').prop('disabled', false);
         $('#saveTaskBtn').removeClass('d-none');
         $('#taskModalLabel').html('<i class="fas fa-edit me-2"></i>Edit Task');
@@ -95,28 +108,53 @@
 
     // Show features available to assigned users
     function showAssignedUserFeatures() {
-        // Add assigned user badge to modal header
-        if (!$('#assignedBadge').length) {
-            $('#taskModalLabel').append(' <span id="assignedBadge" class="badge bg-info ms-2">Assigned Task</span>');
-        }
+        // Update modal title to indicate read-only mode
+        $('#taskModalLabel').html('<i class="fas fa-edit me-2"></i>Edit Task <span class="text-muted">(Read only)</span>');
         
         // Disable all form controls
         $('.task-field').prop('disabled', true);
         $('.assignment-control').prop('disabled', true);
         
-        // Hide delete button if present
+        // Hide save and delete buttons
+        $('#saveTaskBtn').addClass('d-none');
         $('#deleteTaskBtn').remove();
         
-        // Add assigned user styling
-        $('.task-field').addClass('assigned-field');
-        $('.modal-header').addClass('assigned-header');
+        // Keep assignment section visible but disable it
+        $('#assignmentSection').removeClass('d-none');
+        $('.assignment-control').prop('disabled', true);
         
-        // Show read-only indicators
+        // Add read-only indicators to form labels
         $('.task-field').each(function() {
-            if (!$(this).siblings('.readonly-indicator').length) {
-                $(this).after('<small class="text-muted readonly-indicator">Read-only</small>');
+            const $field = $(this);
+            const $label = $field.siblings('label').first();
+            
+            // Add (Read only) to field labels
+            if ($label.length && !$label.find('.readonly-text').length) {
+                $label.append(' <span class="text-muted readonly-text">(Read only)</span>');
             }
+            
+            // Add read-only styling
+            $field.addClass('assigned-field');
         });
+        
+        // Add (Read only) to assignment section title
+        const $assignmentLabel = $('#assignmentSection label');
+        if ($assignmentLabel.length && !$assignmentLabel.find('.readonly-text').length) {
+            $assignmentLabel.append(' <span class="text-muted readonly-text">(Read only)</span>');
+        }
+        
+        // Add a subtle info message
+        if (!$('#readonlyMessage').length) {
+            const readonlyMessage = `
+                <div class="alert alert-light border-info mt-3" id="readonlyMessage" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-info-circle me-2 text-info"></i>
+                        <small class="mb-0 text-muted">This task was assigned to you for viewing only. You cannot make changes to assigned tasks.</small>
+                    </div>
+                </div>
+            `;
+            $('.modal-body').append(readonlyMessage);
+        }
     }
 
     // Delete task from modal (owner only)
@@ -180,9 +218,21 @@
         
         // Remove read-only indicators
         $('.readonly-indicator').remove();
+        $('.readonly-text').remove();
         
         // Clear forms restriction messages
         $('#assignmentSection').next('.alert.alert-warning').remove();
+        
+        // Remove read-only message
+        $('#readonlyMessage').remove();
+        
+        // Show save button and assignment section for new tasks
+        $('#saveTaskBtn').removeClass('d-none');
+        $('#assignmentSection').removeClass('d-none');
+        
+        // Enable all fields
+        $('.task-field').prop('disabled', false);
+        $('.assignment-control').prop('disabled', false);
         
         // Keep delete button for all users
         // $('#deleteTaskBtn').remove();
@@ -284,6 +334,25 @@
                 .task-field:disabled {
                     opacity: 0.7;
                     cursor: not-allowed;
+                    background-color: #f8f9fa;
+                }
+                
+                /* Assigned user field styling */
+                .assigned-field {
+                    background-color: #f8f9fa !important;
+                    border-color: #dee2e6 !important;
+                }
+                
+                /* Read-only text styling */
+                .readonly-text {
+                    font-size: 0.85rem;
+                    color: #6c757d;
+                    font-weight: normal;
+                }
+                
+                /* Read-only message styling */
+                #readonlyMessage {
+                    border-left: 3px solid #17a2b8;
                 }
             </style>
         `;

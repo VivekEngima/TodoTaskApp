@@ -91,52 +91,9 @@
 
         const reassignmentBlockedHtml = `
             <div class="reassignment-blocked-container">
-                <div class="alert alert-warning mb-3" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-lock fa-2x me-3 text-warning"></i>
-                        <div>
-                            <h6 class="alert-heading mb-1">
-                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                Re-assigning Task Not Allowed
-                            </h6>
-                            <p class="mb-0">This task has already been assigned and cannot be reassigned to different users.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="current-assignment-info">
-                    <h6 class="text-muted mb-2">
-                        <i class="fas fa-users me-1"></i>
-                        Currently Assigned To:
-                    </h6>
-                    <div class="assigned-users-list">
-                        ${assignedUserNames.map(username => `
-                            <div class="assigned-user-item">
-                                <i class="fas fa-user-check me-2 text-success"></i>
-                                <span class="fw-medium">${window.TodoApp.Utils.escapeHtml(username)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="assignment-details mt-3">
-                        <small class="text-muted">
-                            <i class="fas fa-calendar-alt me-1"></i>
-                            First assigned on: <strong>${new Date(assignmentStatus.FirstAssignmentDate).toLocaleDateString()}</strong>
-                        </small>
-                    </div>
-                </div>
-
-                <div class="assignment-help mt-3">
-                    <div class="card border-info">
-                        <div class="card-body py-2">
-                            <small class="text-info">
-                                <i class="fas fa-info-circle me-1"></i>
-                                <strong>Note:</strong> Once a task is assigned, it maintains its assignment integrity. 
-                                You can still edit other task details, but user assignments cannot be changed.
-                            </small>
-                        </div>
-                    </div>
-                </div>
+                    <p class="mb-0 text-muted">
+                        <strong>Re-assigning task not allowed</strong>
+                    </p>
             </div>
         `;
         

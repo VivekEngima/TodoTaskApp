@@ -116,19 +116,20 @@ namespace TodoTaskApp.Controllers
                     var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(t.Id);
                     var isSharedTask = assignedUserIds.Any();
                     
-                    // Allow all users to edit/delete any task
+                    // Determine user relationship to task
                     var isOwner = t.UserId == userId;
-                    var canEdit = true;  // All users can edit any task
-                    var canDelete = true;  // All users can delete any task
-                    
-                    // Determine assignment relationship for tag display
-                    var userRole = "Owner"; // Default to owner
-                    var isAssignedToCurrentUser = false;
-                    var isAssignedByCurrentUser = false;
+                    var isAssignedToCurrentUser = assignedUserIds.Contains(userId);
                     
                     // Check if current user assigned this task to others
                     var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(t.Id);
-                    isAssignedByCurrentUser = assignments.Any(a => a.AssignedByUserId == userId);
+                    var isAssignedByCurrentUser = assignments.Any(a => a.AssignedByUserId == userId);
+                    
+                    // Permission logic: Owners and users who assigned tasks can edit/delete, assigned users can only view
+                    var canEdit = isOwner || isAssignedByCurrentUser;  // Owners and assigners can edit
+                    var canDelete = isOwner;  // Only owners can delete
+                    
+                    // Determine assignment relationship for tag display
+                    var userRole = "Owner"; // Default to owner
                     
                     // Check if current user can assign this task (only original assigner can reassign)
                     var canAssignTask = await _taskAssignmentService.CanAssignTaskAsync(t.Id, new List<int>(), userId);
@@ -137,11 +138,20 @@ namespace TodoTaskApp.Controllers
                     {
                         userRole = "Owner";
                     }
-                    else if (t.IsAssigned)
+                    else if (isAssignedToCurrentUser && !isAssignedByCurrentUser)
                     {
+                        // User is assigned TO this task (received task) - read-only
                         userRole = "Assigned";
-                        isAssignedToCurrentUser = true; // Current user is assigned to this task
                     }
+                    else if (isAssignedByCurrentUser)
+                    {
+                        // User assigned this task to others (shared task) - editable
+                        userRole = "Shared";
+                    }
+                    
+                    // Debug logging for final values (uncomment for troubleshooting)
+                    // _logger.LogInformation("Task {TaskId} Final: UserRole={UserRole}, CanEdit={CanEdit}, CanDelete={CanDelete}, IsAssignedToCurrentUser={IsAssignedToCurrentUser}", 
+                    //     t.Id, userRole, canEdit, canDelete, isAssignedToCurrentUser);
                     
                     tasksWithInfo.Add(new
                     {
@@ -192,10 +202,13 @@ namespace TodoTaskApp.Controllers
                 var assignedUserIds = await _taskAssignmentService.GetAssignedUserIdsAsync(id);
                 var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(id);
                 
-                // Allow all users to edit/delete any task
+                // Determine user relationship to task
                 var isOwner = task.UserId == userId;
-                var canEdit = true;  // All users can edit any task
-                var canDelete = true;  // All users can delete any task
+                var isAssignedToCurrentUser = assignedUserIds.Contains(userId);
+                
+                // Permission logic: Owners can edit/delete, assigned users can only view
+                var canEdit = isOwner;  // Only owners can edit
+                var canDelete = isOwner;  // Only owners can delete
 
                 var taskWithAssignments = new
                 {
@@ -212,7 +225,8 @@ namespace TodoTaskApp.Controllers
                     AssignedUserIds = assignedUserIds.ToList(),
                     Assignments = assignments.ToList(),
                     CanEdit = canEdit,
-                    CanDelete = canDelete
+                    CanDelete = canDelete,
+                    IsAssignedToCurrentUser = isAssignedToCurrentUser
                 };
 
                 return Json(new { success = true, data = taskWithAssignments });
@@ -273,6 +287,23 @@ namespace TodoTaskApp.Controllers
                 }
 
                 var userId = User.GetUserId();
+                
+                // Check if user can edit this task (owners and assigners can edit)
+                var task = await _todoTaskService.GetTaskByIdAsync(model.Id, userId);
+                if (task == null)
+                {
+                    return Json(new { success = false, message = "Task not found" });
+                }
+                
+                var isOwner = task.UserId == userId;
+                var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(model.Id);
+                var isAssignedByCurrentUser = assignments.Any(a => a.AssignedByUserId == userId);
+                
+                if (!isOwner && !isAssignedByCurrentUser)
+                {
+                    return Json(new { success = false, message = "You can only edit tasks that you created or assigned. This task is assigned to you for viewing only." });
+                }
+                
                 var success = await _todoTaskService.UpdateTaskAsync(model, userId);
 
                 if (success)
@@ -362,6 +393,20 @@ namespace TodoTaskApp.Controllers
             try
             {
                 var userId = User.GetUserId();
+                
+                // Check if user can delete this task (only owners can delete)
+                var task = await _todoTaskService.GetTaskByIdAsync(id, userId);
+                if (task == null)
+                {
+                    return Json(new { success = false, message = "Task not found" });
+                }
+                
+                var isOwner = task.UserId == userId;
+                if (!isOwner)
+                {
+                    return Json(new { success = false, message = "You can only delete tasks that you created. This task is assigned to you for viewing only." });
+                }
+                
                 var success = await _todoTaskService.DeleteTaskAsync(id, userId);
 
                 if (success)
@@ -386,6 +431,23 @@ namespace TodoTaskApp.Controllers
             try
             {
                 var userId = User.GetUserId();
+                
+                // Check if user can edit this task (owners and assigners can edit)
+                var task = await _todoTaskService.GetTaskByIdAsync(id, userId);
+                if (task == null)
+                {
+                    return Json(new { success = false, message = "Task not found" });
+                }
+                
+                var isOwner = task.UserId == userId;
+                var assignments = await _taskAssignmentService.GetTaskAssignmentsAsync(id);
+                var isAssignedByCurrentUser = assignments.Any(a => a.AssignedByUserId == userId);
+                
+                if (!isOwner && !isAssignedByCurrentUser)
+                {
+                    return Json(new { success = false, message = "You can only update tasks that you created or assigned. This task is assigned to you for viewing only." });
+                }
+                
                 var success = await _todoTaskService.UpdateTaskStatusAsync(id, status, userId);
 
                 if (success)
