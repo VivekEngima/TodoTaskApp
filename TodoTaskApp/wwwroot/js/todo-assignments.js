@@ -99,7 +99,7 @@
         
         container.html(reassignmentBlockedHtml);
     }
-
+    // Add new comments element in Action column in todo task beside edit and delete element. Where both task owner and assign task user can both write comments
     // Show normal user assignment list
     function showUserAssignmentList(selectedUserIds = []) {
         const container = $("#userAssignmentList");

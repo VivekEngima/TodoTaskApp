@@ -247,6 +247,7 @@
         if (!task || !task.Id) {
             return '';
         }
+        
 
         const isCompleted = (task.Status || '') === "Completed";
         const txtClass = isCompleted ? "text-decoration-line-through text-muted" : "";
@@ -310,10 +311,12 @@
                                 title="Edit Task">
                             <i class="fas fa-edit"></i>
                         </button>
+                        ${task.UserRole !== "Assigned" ? `
                         <button class="btn btn-outline-danger btn-sm" onclick="deleteTodoTask(${task.Id})" 
                                 title="Delete Task">
                             <i class="fas fa-trash"></i>
                         </button>
+                        ` : ''}
                     </div>
                 </td>
             </tr>

@@ -394,15 +394,16 @@ namespace TodoTaskApp.Controllers
             {
                 var userId = User.GetUserId();
                 
-                // Check if user can delete this task (only owners can delete)
-                var task = await _todoTaskService.GetTaskByIdAsync(id, userId);
-                if (task == null)
+                // First check if user can access this task at all
+                var canAccess = await _taskAssignmentService.CanUserAccessTaskAsync(id, userId);
+                if (!canAccess)
                 {
                     return Json(new { success = false, message = "Task not found" });
                 }
                 
-                var isOwner = task.UserId == userId;
-                if (!isOwner)
+                // Check if user can edit this task (only owners can delete)
+                var canEdit = await _taskAssignmentService.CanUserEditTaskAsync(id, userId);
+                if (!canEdit)
                 {
                     return Json(new { success = false, message = "You can only delete tasks that you created. This task is assigned to you for viewing only." });
                 }
