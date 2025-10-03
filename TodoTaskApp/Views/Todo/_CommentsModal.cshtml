@@ -1,0 +1,38 @@
+<!-- Comments Modal -->
+<div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commentsModalLabel">
+                    <i class="fas fa-comments me-2"></i>Task Comments
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <!-- Comments List (Chat Field) - Now at the top -->
+                <div id="commentsList" class="p-3" style="height: 450px; overflow-y: auto; border-bottom: 1px solid #dee2e6;">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin"></i> Loading comments...
+                    </div>
+                </div>
+
+                <!-- Add Comment Form - Basic layout with file upload -->
+                <div style="padding: 10px;">
+                    <form id="addCommentForm">
+                        <div style="margin-bottom: 8px;">
+                            <textarea id="commentText" rows="2" style="width: 100%; border: 1px solid #ccc; padding: 5px; box-sizing: border-box;" 
+                                    placeholder="Write your comment here..." maxlength="1000"></textarea>
+                        </div>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="file" id="commentFile" style="flex: 1; border: 1px solid #ccc; padding: 3px;" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
+                            <button type="button" id="addCommentBtn" style="padding: 5px 10px; border: 1px solid #007bff; background: #007bff; color: white;">
+                                Add
+                            </button>
+                            <button type="button" data-bs-dismiss="modal" style="padding: 5px 10px; border: 1px solid #6c757d; background: #6c757d; color: white;">Close</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

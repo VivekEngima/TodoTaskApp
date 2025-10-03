@@ -1,0 +1,109 @@
+﻿<!-- Document Management Modal -->
+<div class="modal fade" id="documentModal" tabindex="-1" aria-labelledby="documentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="documentModalLabel">
+                     Manage Documents
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Upload Section -->
+                <div class="mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-upload me-2"></i>Upload New Documents
+                            </h6>
+                            <small class="text-muted">Maximum 5 documents per task</small>
+                        </div>
+                        <div class="card-body">
+                            <form id="documentUploadForm" enctype="multipart/form-data">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" id="docTaskId" name="TaskId" />
+                                <div class="row">
+                                    <div class="col-9">
+                                        <input type="file" class="form-control" id="documentFile"
+                                               name="Files" accept="*/*" multiple required />
+                                    </div>
+                                    <div class="col-3">
+                                        <button type="submit" class="btn btn-primary w-100" id="uploadBtn">
+                                            <i class="fas fa-upload"></i> Upload
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents List -->
+                <div id="documentsList">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <i class="fas fa-file me-2"></i>Documents
+                            </h6>
+                            <span class="badge bg-info" id="documentCountBadge">0/5</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="documentsContainer">
+                                <!-- Documents will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Replace Document Modal (NEW) -->
+<div class="modal fade" id="replaceDocumentModal" tabindex="-1" aria-labelledby="replaceDocumentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="replaceDocumentModalLabel">
+                   Replace Document
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <div class="fw-medium">Current Document:</div> 
+                    <span id="currentDocumentName" class="text-primary"></span>
+                </div>
+
+                <form id="replaceDocumentForm" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="replaceDocumentId" name="documentId" />
+
+                    <div class="mb-3">
+                        <label for="replaceDocumentFile" class="form-label">
+                            Select New File
+                        </label>
+                        <input type="file" class="form-control" id="replaceDocumentFile"
+                               name="newFile" accept="*/*" required />
+                        <div class="form-text">
+                            Maximum file size: 5MB. All file types supported.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="submit" form="replaceDocumentForm" class="btn btn-warning">
+                    <i class="fas fa-exchange-alt"></i> Replace Document
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

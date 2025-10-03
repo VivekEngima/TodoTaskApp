@@ -1,0 +1,290 @@
+﻿<!-- Updated _TaskModal.cshtml with proper assignment dropdown -->
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="taskForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="taskId" name="Id" value="0" />
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalLabel">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Task
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Alert for form errors -->
+                    <div id="taskAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                    <div class="row">
+                        <!-- Left column -->
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="taskTitle" class="form-label">Title *</label>
+                                <input type="text" class="form-control task-field" id="taskTitle" name="Title" maxlength="100" required />
+                                <div class="invalid-feedback" id="titleError"></div>
+                                <small class="form-text text-muted">Maximum 100 characters, no special characters allowed.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="taskDescription" class="form-label">Description</label>
+                                <textarea class="form-control task-field" id="taskDescription" name="Description" rows="3" maxlength="500"></textarea>
+                                <div class="invalid-feedback" id="descriptionError"></div>
+                                <small class="form-text text-muted">Maximum 500 characters.</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="taskPriority" class="form-label">Priority</label>
+                                        <select class="form-select task-field" id="taskPriority" name="Priority">
+                                            <option value="High">High</option>
+                                            <option value="Normal" selected>Normal</option>
+                                            <option value="Low">Low</option>
+                                        </select>
+                                        <div class="invalid-feedback" id="priorityError"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="taskStatus" class="form-label">Status</label>
+                                        <select class="form-select task-field" id="taskStatus" name="Status">
+                                            <option value="Pending" selected>Pending</option>
+                                            <option value="Hold">Hold</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                        <div class="invalid-feedback" id="statusError"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="taskDueDate" class="form-label">Due Date *</label>
+                                <input type="date" class="form-control task-field" id="taskDueDate" name="DueDate" required />
+                                <div class="invalid-feedback" id="dueDateError"></div>
+                                <small class="form-text text-muted">Default is 7 days from today.</small>
+                            </div>
+                        </div>
+
+                        <!-- Right column - Assignment section -->
+                        <div class="col-md-6">
+                            <!-- Assignment Section -->
+                            <div id="assignmentSection" class="mb-3">
+                                <label class="form-label d-flex align-items-center">
+                                    <i class="bi bi-people me-2 text-primary"></i>
+                                    Assign to Users
+                                </label>
+
+                                <!-- Assignment controls -->
+                                <div class="border rounded p-3 bg-light">
+                                    <!-- Loading state -->
+                                    <div id="assignmentLoading" class="text-center py-2 d-none">
+                                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                        <small>Loading users...</small>
+                                    </div>
+
+                                    <!-- User selection -->
+                                    <div id="assignmentControls">
+                                        <small class="form-text text-muted mb-2 d-block">
+                                            Select users to assign this task to:
+                                        </small>
+
+                                        <div id="userAssignmentList" class="user-assignment-list" style="max-height: 150px; overflow-y: auto;">
+                                            <!-- Users will be populated using JavaScript -->
+                                            <div class="text-muted text-center py-2">
+                                                <i class="bi bi-hourglass-split"></i> Loading users...
+                                            </div>
+                                        </div>
+
+                                       
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Current assignments display (for edit mode) -->
+                            <div id="currentAssignments" class="mb-3 d-none">
+                                <label class="form-label text-muted">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Current Assignments
+                                </label>
+                                <div id="currentAssignmentsList" class="list-group">
+                                    <!-- Current assignments will be shown here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i>Close
+                    </button>
+                    <button type="submit" class="btn btn-primary d-none" id="saveTaskBtn">
+                        <i class="bi bi-check-circle me-1"></i>Save Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- CSS for assignment UI -->
+<style>
+    .user-assignment-list {
+        border: 1px solid #e3e6ea;
+        border-radius: 6px;
+        background: white;
+    }
+
+    .user-assignment-item {
+        padding: 8px 12px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+
+        .user-assignment-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-assignment-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .user-assignment-item input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .user-assignment-item label {
+            margin-bottom: 0;
+            font-weight: normal;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+    .current-assignment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+    }
+
+    .assignment-badge {
+        font-size: 0.75rem;
+    }
+
+    /* Loading state */
+    .assignment-loading {
+        text-align: center;
+        padding: 1rem;
+        color: #6c757d;
+    }
+
+    /* Disabled state for assigned users */
+    .task-field:disabled {
+        background-color: #f8f9fa;
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .task-field:disabled + .form-text {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    /* Assignment restriction styles */
+    .assignment-restricted {
+        opacity: 0.8;
+        /* Removed orange/yellow background and border */
+    }
+
+    .assignment-restricted .assignment-checkbox:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .assignment-restricted .form-check-label {
+        opacity: 0.7;
+    }
+
+    .restriction-badge {
+        font-size: 0.75rem;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    .assignment-help {
+        background-color: #f8f9fa;
+        border-left: 3px solid #ffc107;
+        padding: 8px 12px;
+        border-radius: 4px;
+    }
+
+    /* Conditional rendering styles for reassignment blocked */
+    .reassignment-blocked-container {
+        padding: 15px;
+        /* Removed yellow background and border */
+        border-radius: 8px;
+    }
+
+    .assigned-users-list {
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        padding: 10px;
+        border: 1px solid #e9ecef;
+    }
+
+    .assigned-user-item {
+        display: flex;
+        align-items: center;
+        padding: 5px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .assigned-user-item:last-child {
+        border-bottom: none;
+    }
+
+    .assignment-details {
+        background-color: #e3f2fd;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border-left: 3px solid #2196f3;
+    }
+
+    /* Enhanced restriction styling */
+    .assignment-restricted .reassignment-blocked-container {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .reassignment-blocked-container {
+            padding: 10px;
+        }
+        
+        .alert .d-flex {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .alert .d-flex i {
+            margin-bottom: 10px;
+        }
+    }
+    
+</style>
