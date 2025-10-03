@@ -1,5 +1,45 @@
 /* Custom styles for Todo Task App - FIXED VERSION */
 
+/* Google Sign-In Button Styles */
+.social-login-section {
+  margin-top: 2rem;
+}
+
+.social-buttons {
+  margin-top: 1rem;
+}
+
+.btn-google {
+  border: 1px solid #000000;
+  color: black;
+  font-weight: 500;
+  padding: 12px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-google:hover {
+  background-color: black;
+  border: 1px solid #000000;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(18, 33, 58, 0.3);
+}
+
+.btn-google:focus {
+  background-color: black;
+  border: 1px solid #000000;
+  color: white;
+  box-shadow: 0 0 0 0.2rem rgba(14, 28, 51, 0.25);
+}
+
+.btn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
 /* Comments Modal - Basic Plain Style */
 #commentsList {
   background-color: white;

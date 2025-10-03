@@ -33,6 +33,18 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
+// Add Google Authentication
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+        options.CallbackPath = "/signin-google";
+        options.SaveTokens = true;
+        options.Scope.Add("email");
+        options.Scope.Add("profile");
+    });
+
 // Configure Identity authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {

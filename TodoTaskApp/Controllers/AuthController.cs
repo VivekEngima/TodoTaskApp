@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 using TodoTaskApp.Data;
 using Dapper;
+using System.Security.Claims;
 
 namespace TodoTaskApp.Controllers
 {
@@ -201,6 +202,90 @@ namespace TodoTaskApp.Controllers
         {
             return View();
         }
+
+        // Google Sign-In Challenge
+        [HttpGet]
+        public IActionResult GoogleSignIn(string? returnUrl = null)
+        {
+            var redirectUrl = Url.Action("GoogleCallback", "Auth", new { ReturnUrl = returnUrl });
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+            return Challenge(properties, "Google");
+        }
+
+        // Google Sign-In Callback
+        [HttpGet]
+        public async Task<IActionResult> GoogleCallback(string? returnUrl = null, string? remoteError = null)
+        {
+            if (remoteError != null)
+            {
+                TempData["ErrorMessage"] = $"Error from external provider: {remoteError}";
+                return RedirectToAction("Index");
+            }
+
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+            {
+                TempData["ErrorMessage"] = "Error loading external login information.";
+                return RedirectToAction("Index");
+            }
+
+            // Sign in the user with this external login provider if the user already has a login
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+            
+            if (result.Succeeded)
+            {
+                // User successfully signed in, redirect to dashboard
+                return RedirectToAction("Index", "Dashboard");
+            }
+            
+            if (result.IsLockedOut)
+            {
+                TempData["ErrorMessage"] = "Your account has been locked out.";
+                return RedirectToAction("Index");
+            }
+            else
+            {
+                // If the user does not have an account, create one automatically
+                var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+                var name = info.Principal.FindFirstValue(ClaimTypes.Name);
+                
+                if (string.IsNullOrEmpty(email))
+                {
+                    TempData["ErrorMessage"] = "Unable to retrieve email from Google account.";
+                    return RedirectToAction("Index");
+                }
+
+                // Create new user automatically
+                var user = new User
+                {
+                    UserName = email, // Use email as username
+                    Email = email,
+                    CreatedDate = DateTime.Now
+                };
+
+                var createResult = await _userManager.CreateAsync(user);
+                if (createResult.Succeeded)
+                {
+                    var addLoginResult = await _userManager.AddLoginAsync(user, info);
+                    if (addLoginResult.Succeeded)
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
+                        
+                        // Create legacy user entry for compatibility
+                        await CreateLegacyUserAsync(email, "GoogleAuth");
+                        
+                        TempData["SuccessMessage"] = "Welcome to TodoTaskApp! Your Google account has been linked successfully.";
+                        return RedirectToAction("Index", "Dashboard");
+                    }
+                }
+                
+                // If account creation failed, show error
+                var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                TempData["ErrorMessage"] = $"Account creation failed: {errors}";
+                return RedirectToAction("Index");
+            }
+        }
+
 
         // Helper method to create legacy user entry for database compatibility
         private async Task CreateLegacyUserAsync(string username, string password)
