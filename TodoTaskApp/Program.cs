@@ -48,7 +48,7 @@ builder.Services.AddAuthentication()
 // Configure Identity authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/Auth/Index";
+    options.LoginPath = "/"; // Home page is now the login page
     options.LogoutPath = "/Auth/Logout";
     options.AccessDeniedPath = "/Auth/AccessDenied";
     options.ExpireTimeSpan = TimeSpan.FromHours(24);
@@ -109,9 +109,15 @@ app.MapControllerRoute(
     defaults: new { controller = "Todo", action = "Index" }
 );
 
-// Main page
+app.MapControllerRoute(
+    name: "Dashboard",
+    pattern: "Dashboard/{action=Index}",
+    defaults: new { controller = "Dashboard" }
+);
+
+// Main page - Home page shows login/signup
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Dashboard}/{action=Index}");
+    pattern: "{controller=Home}/{action=Index}");
 
 app.Run();

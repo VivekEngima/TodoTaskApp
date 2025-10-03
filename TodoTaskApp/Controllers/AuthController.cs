@@ -48,9 +48,9 @@ namespace TodoTaskApp.Controllers
             
             if (!ModelState.IsValid)
             {
-                // Always return to the unified auth page
+                // Always return to the home page (which shows auth)
                 var authViewModel = new AuthViewModel { Login = model };
-                return View("Index", authViewModel);
+                return View("~/Views/Home/Index.cshtml", authViewModel);
             }
 
             try
@@ -70,9 +70,9 @@ namespace TodoTaskApp.Controllers
                         TempData["ErrorMessage"] = "Invalid password. Please check your password and try again.";
                     }
 
-                    // Always return to the unified auth page
+                    // Always return to the home page (which shows auth)
                     var authViewModel = new AuthViewModel { Login = model };
-                    return View("Index", authViewModel);
+                    return View("~/Views/Home/Index.cshtml", authViewModel);
                 }
 
                 // Redirect to return URL or dashboard
@@ -86,10 +86,10 @@ namespace TodoTaskApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during login");
-                // Always return to the unified auth page
+                // Always return to the home page (which shows auth)
                 TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
                 var authViewModel = new AuthViewModel { Login = model };
-                return View("Index", authViewModel);
+                return View("~/Views/Home/Index.cshtml", authViewModel);
             }
         }
 
@@ -100,9 +100,9 @@ namespace TodoTaskApp.Controllers
         {
             if (!ModelState.IsValid)
             {
-                // Always return to the unified auth page
+                // Always return to the home page (which shows auth)
                 var authViewModel = new AuthViewModel { Signup = model };
-                return View("Index", authViewModel);
+                return View("~/Views/Home/Index.cshtml", authViewModel);
             }
 
             try
@@ -113,7 +113,7 @@ namespace TodoTaskApp.Controllers
                 {
                     TempData["ErrorMessage"] = "Username is already taken. Please choose a different username.";
                     var authViewModel = new AuthViewModel { Signup = model };
-                    return View("Index", authViewModel);
+                    return View("~/Views/Home/Index.cshtml", authViewModel);
                 }
 
                 // Create new user
@@ -130,7 +130,7 @@ namespace TodoTaskApp.Controllers
                     var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                     TempData["ErrorMessage"] = $"Account creation failed: {errors}";
                     var authViewModel = new AuthViewModel { Signup = model };
-                    return View("Index", authViewModel);
+                    return View("~/Views/Home/Index.cshtml", authViewModel);
                 }
 
                 // Create legacy user entry for compatibility with existing database
@@ -145,10 +145,10 @@ namespace TodoTaskApp.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during signup");
-                // Always return to the unified auth page
+                // Always return to the home page (which shows auth)
                 TempData["ErrorMessage"] = "An unexpected error occurred. Please try again.";
                 var authViewModel = new AuthViewModel { Signup = model };
-                return View("Index", authViewModel);
+                return View("~/Views/Home/Index.cshtml", authViewModel);
             }
         }
 
@@ -160,12 +160,12 @@ namespace TodoTaskApp.Controllers
             try
             {
                 await _signInManager.SignOutAsync();
-                return RedirectToAction("Index", "Auth");
+                return RedirectToAction("Index", "Home");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during logout");
-                return RedirectToAction("Index", "Auth");
+                return RedirectToAction("Index", "Home");
             }
         }
 
@@ -219,14 +219,14 @@ namespace TodoTaskApp.Controllers
             if (remoteError != null)
             {
                 TempData["ErrorMessage"] = $"Error from external provider: {remoteError}";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
 
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {
                 TempData["ErrorMessage"] = "Error loading external login information.";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
 
             // Sign in the user with this external login provider if the user already has a login
@@ -241,7 +241,7 @@ namespace TodoTaskApp.Controllers
             if (result.IsLockedOut)
             {
                 TempData["ErrorMessage"] = "Your account has been locked out.";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
             else
             {
@@ -252,7 +252,7 @@ namespace TodoTaskApp.Controllers
                 if (string.IsNullOrEmpty(email))
                 {
                     TempData["ErrorMessage"] = "Unable to retrieve email from Google account.";
-                    return RedirectToAction("Index");
+                    return RedirectToAction("Index", "Home");
                 }
 
                 // Create new user automatically
@@ -282,7 +282,7 @@ namespace TodoTaskApp.Controllers
                 // If account creation failed, show error
                 var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                 TempData["ErrorMessage"] = $"Account creation failed: {errors}";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", "Home");
             }
         }
 
