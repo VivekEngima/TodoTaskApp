@@ -803,6 +803,78 @@ namespace TodoTaskApp.Controllers
             }
         }
 
+        // Download comment file
+        [HttpGet]
+        public IActionResult DownloadCommentFile(string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileName))
+                    return NotFound();
+
+                var uploadsPath = Path.Combine(_webHostEnvironment.WebRootPath, "uploads", "comments");
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                if (!System.IO.File.Exists(filePath))
+                    return NotFound();
+
+                var fileBytes = System.IO.File.ReadAllBytes(filePath);
+                var contentType = GetContentType(fileName);
+                
+                // Extract original filename (remove timestamp suffix)
+                var originalFileName = GetOriginalFileName(fileName);
+
+                return File(fileBytes, contentType, originalFileName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading comment file: {FileName}", fileName);
+                return NotFound();
+            }
+        }
+
+        private string GetContentType(string fileName)
+        {
+            var extension = Path.GetExtension(fileName).ToLowerInvariant();
+            return extension switch
+            {
+                ".pdf" => "application/pdf",
+                ".doc" => "application/msword",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".txt" => "text/plain",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                ".zip" => "application/zip",
+                ".rar" => "application/x-rar-compressed",
+                _ => "application/octet-stream"
+            };
+        }
+
+        private string GetOriginalFileName(string fileName)
+        {
+            // Remove the timestamp suffix that was added during upload
+            // Format: originalname_yyyyMMdd_HHmmss.ext
+            var lastUnderscoreIndex = fileName.LastIndexOf('_');
+            if (lastUnderscoreIndex > 0)
+            {
+                var beforeLastUnderscore = fileName.Substring(0, lastUnderscoreIndex);
+                var afterLastUnderscore = fileName.Substring(lastUnderscoreIndex + 1);
+                
+                // Check if the part after last underscore looks like a timestamp (yyyyMMdd_HHmmss)
+                if (afterLastUnderscore.Length >= 15 && afterLastUnderscore.Contains('_'))
+                {
+                    var parts = afterLastUnderscore.Split('_');
+                    if (parts.Length == 2 && parts[0].Length == 8 && parts[1].Length == 6)
+                    {
+                        return beforeLastUnderscore + Path.GetExtension(fileName);
+                    }
+                }
+            }
+            
+            return fileName; // Return as-is if we can't parse the timestamp
+        }
+
         // AJAX: Replace/Update existing document
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -888,6 +960,12 @@ namespace TodoTaskApp.Controllers
                 if (string.IsNullOrWhiteSpace(Comment) && File == null)
                 {
                     return Json(new { success = false, message = "Please enter a comment or select a file" });
+                }
+
+                // Additional validation: if comment is only whitespace and no file
+                if (!string.IsNullOrWhiteSpace(Comment) && Comment.Trim().Length == 0 && File == null)
+                {
+                    return Json(new { success = false, message = "Please enter a meaningful comment or select a file" });
                 }
 
                 var userId = User.GetUserId();

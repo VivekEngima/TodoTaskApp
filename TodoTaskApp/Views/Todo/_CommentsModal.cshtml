@@ -20,15 +20,21 @@
                 <div style="padding: 10px;">
                     <form id="addCommentForm">
                         <div style="margin-bottom: 8px;">
-                            <textarea id="commentText" rows="2" style="width: 100%; border: 1px solid #ccc; padding: 5px; box-sizing: border-box;" 
-                                    placeholder="Write your comment here..." maxlength="1000"></textarea>
+                            <textarea id="commentText" rows="2" style="width: 100%; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; border-radius: 4px;" 
+                                    placeholder="Write your comment here... (Required if no file is attached)" maxlength="1000"></textarea>
                         </div>
-                        <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="file" id="commentFile" style="flex: 1; border: 1px solid #ccc; padding: 3px;" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
-                            <button type="button" id="addCommentBtn" style="padding: 5px 10px; border: 1px solid #007bff; background: #007bff; color: white;">
-                                Add
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="flex: 1; position: relative;">
+                                <input type="file" id="commentFile" style="width: 100%; border: 1px solid #ccc; padding: 8px; border-radius: 4px; background-color: white;" 
+                                       accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip,.rar,.xls,.xlsx,.ppt,.pptx">
+                                <div id="filePreview" style="margin-top: 4px; font-size: 12px; color: #666; display: none;">
+                                    <i class="fas fa-paperclip me-1"></i><span id="fileName"></span>
+                                </div>
+                            </div>
+                            <button type="button" id="addCommentBtn" style="padding: 8px 16px; border: 1px solid #007bff; background: #007bff; color: white; border-radius: 4px; font-weight: 500;">
+                                <i class="fas fa-plus me-1"></i>Add
                             </button>
-                            <button type="button" data-bs-dismiss="modal" style="padding: 5px 10px; border: 1px solid #6c757d; background: #6c757d; color: white;">Close</button>
+                            <button type="button" data-bs-dismiss="modal" style="padding: 8px 16px; border: 1px solid #6c757d; background: #6c757d; color: white; border-radius: 4px;">Close</button>
                         </div>
                     </form>
                 </div>

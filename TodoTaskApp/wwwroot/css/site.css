@@ -777,3 +777,56 @@ body.auth-page {
   flex-wrap: wrap;
   gap: 0.25rem;
 }
+
+/* Comment file attachment styles */
+.comment-file-attachment {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #007bff;
+  transition: all 0.2s ease;
+}
+
+.comment-file-attachment:hover {
+  background-color: #e9ecef;
+  border-left-color: #0056b3;
+}
+
+.comment-file-download-btn {
+  color: #007bff;
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  font-size: 11px;
+  background-color: white;
+  transition: all 0.2s;
+}
+
+.comment-file-download-btn:hover {
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+}
+
+.comment-file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-file-details {
+  flex: 1;
+}
+
+.comment-file-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 13px;
+}
+
+.comment-file-type {
+  font-size: 11px;
+  color: #666;
+}

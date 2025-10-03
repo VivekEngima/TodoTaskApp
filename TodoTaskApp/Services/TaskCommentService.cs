@@ -44,6 +44,7 @@ namespace TodoTaskApp.Services
                         UserId = comment.UserId,
                         Username = comment.Username,
                         Comment = comment.Comment,
+                        FileName = comment.FileName,
                         CreatedDate = comment.CreatedDate,
                         UpdatedDate = comment.UpdatedDate,
                         CanEdit = false,
@@ -83,6 +84,7 @@ namespace TodoTaskApp.Services
                     UserId = comment.UserId,
                     Username = comment.User?.UserName ?? "",
                     Comment = comment.Comment,
+                    FileName = comment.FileName,
                     CreatedDate = comment.CreatedDate,
                     UpdatedDate = comment.UpdatedDate,
                     CanEdit = canEdit,
@@ -112,6 +114,7 @@ namespace TodoTaskApp.Services
                     TaskId = model.TaskId,
                     UserId = userId,
                     Comment = model.Comment,
+                    FileName = model.FileName,
                     CreatedDate = DateTime.Now
                 };
 

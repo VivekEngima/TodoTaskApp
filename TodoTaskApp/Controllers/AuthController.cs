@@ -259,10 +259,14 @@ namespace TodoTaskApp.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
+                // Extract username from email (part before @)
+                var username = email.Split('@')[0];
+                _logger.LogInformation($"Google Sign-In: Extracted username '{username}' from email '{email}'");
+
                 // Create new user automatically
                 var user = new User
                 {
-                    UserName = email, // Use email as username
+                    UserName = username, // Use extracted username
                     Email = email,
                     CreatedDate = DateTime.Now
                 };
@@ -276,9 +280,9 @@ namespace TodoTaskApp.Controllers
                         await _signInManager.SignInAsync(user, isPersistent: false, info.LoginProvider);
                         
                         // Create legacy user entry for compatibility
-                        await CreateLegacyUserAsync(email, "GoogleAuth");
+                        await CreateLegacyUserAsync(username, "GoogleAuth");
                         
-                        TempData["SuccessMessage"] = "Welcome to TodoTaskApp! Your Google account has been linked successfully.";
+                        TempData["SuccessMessage"] = "Welcome to TodoTaskApp! Login in using Google Account.";
                         return RedirectToAction("Index", "Dashboard");
                     }
                 }
