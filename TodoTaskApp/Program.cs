@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TodoTaskApp.Data;
+using TodoTaskApp.IRepository;
+using TodoTaskApp.IServices;
 using TodoTaskApp.Models;
+using TodoTaskApp.Repository;
+using TodoTaskApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,17 +47,17 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // Register repositories
-builder.Services.AddScoped<TodoTaskApp.IRepository.ITodoTaskRepository, TodoTaskApp.Repository.TodoTaskRepository>();
-builder.Services.AddScoped<TodoTaskApp.IRepository.ITaskAssignmentRepository, TodoTaskApp.Repository.TaskAssignmentRepository>();
-builder.Services.AddScoped<TodoTaskApp.IRepository.ITaskCommentRepository, TodoTaskApp.Repository.TaskCommentRepository>();
-builder.Services.AddScoped<TodoTaskApp.IRepository.ITodoTaskDocumentRepository, TodoTaskApp.Repository.TodoTaskDocumentRepository>();
+builder.Services.AddScoped<ITodoTaskRepository,TodoTaskRepository>();
+builder.Services.AddScoped<ITaskAssignmentRepository, TaskAssignmentRepository>();
+builder.Services.AddScoped<ITaskCommentRepository, TaskCommentRepository>();
+builder.Services.AddScoped<ITodoTaskDocumentRepository, TodoTaskDocumentRepository>();
 
 // Register application services
-builder.Services.AddScoped<TodoTaskApp.IServices.ITodoTaskService, TodoTaskApp.Services.TodoTaskService>();
-builder.Services.AddScoped<TodoTaskApp.IServices.ITaskAssignmentService, TodoTaskApp.Services.TaskAssignmentService>();
-builder.Services.AddScoped<TodoTaskApp.IServices.ITaskCommentService, TodoTaskApp.Services.TaskCommentService>();
-builder.Services.AddScoped<TodoTaskApp.IServices.ITodoTaskDocumentService, TodoTaskApp.Services.TodoTaskDocumentService>();
-builder.Services.AddScoped<TodoTaskApp.IServices.IUserService, TodoTaskApp.Services.UserService>();
+builder.Services.AddScoped<ITodoTaskService, TodoTaskService>();
+builder.Services.AddScoped<ITaskAssignmentService, TaskAssignmentService>();
+builder.Services.AddScoped<ITaskCommentService, TaskCommentService>();
+builder.Services.AddScoped<ITodoTaskDocumentService, TodoTaskDocumentService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // JSON formatting
 builder.Services.AddControllers()
