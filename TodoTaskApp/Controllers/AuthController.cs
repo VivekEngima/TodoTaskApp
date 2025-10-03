@@ -56,6 +56,8 @@ namespace TodoTaskApp.Controllers
             try
             {
                 var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, false, lockoutOnFailure: false);
+                
+                _logger.LogInformation($"Login attempt for user '{model.Username}' - Success: {result.Succeeded}");
 
                 if (!result.Succeeded)
                 {
@@ -78,9 +80,11 @@ namespace TodoTaskApp.Controllers
                 // Redirect to return URL or dashboard
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 {
+                    _logger.LogInformation($"Redirecting to return URL: {returnUrl}");
                     return Redirect(returnUrl);
                 }
 
+                _logger.LogInformation("Login successful, redirecting to Dashboard");
                 return RedirectToAction("Index", "Dashboard");
             }
             catch (Exception ex)

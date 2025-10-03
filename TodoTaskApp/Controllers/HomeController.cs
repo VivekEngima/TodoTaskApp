@@ -19,12 +19,17 @@ namespace TodoTaskApp.Controllers
         // Home page shows login/signup section
         public IActionResult Index(string? returnUrl = null)
         {
+            // Debug: Log authentication status
+            _logger.LogInformation($"Home Index - User authenticated: {User.Identity?.IsAuthenticated}, User name: {User.Identity?.Name}");
+            
             // If user is already signed in, redirect to dashboard
             if (_signInManager.IsSignedIn(User))
             {
+                _logger.LogInformation("User is signed in, redirecting to Dashboard");
                 return RedirectToAction("Index", "Dashboard");
             }
 
+            _logger.LogInformation("User not signed in, showing login/signup page");
             // Show login/signup page
             ViewBag.ReturnUrl = returnUrl;
             var authViewModel = new AuthViewModel();

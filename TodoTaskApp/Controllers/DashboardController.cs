@@ -26,6 +26,7 @@ namespace TodoTaskApp.Controllers
         {
             try
             {
+                _logger.LogInformation($"Dashboard Index - User authenticated: {User.Identity?.IsAuthenticated}, User name: {User.Identity?.Name}");
                 var userId = User.GetUserId();
                 var tasks = await _todoTaskService.GetAllTasksAsync(userId);
 
